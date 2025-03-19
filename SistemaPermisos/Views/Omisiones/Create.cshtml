@@ -1,0 +1,55 @@
+﻿@model SistemaPermisos.ViewModels.OmisionViewModel
+
+@{
+    ViewData["Title"] = "Registrar Omisión de Marcación";
+}
+
+<div class="container">
+    <h1>@ViewData["Title"]</h1>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <form asp-action="Create">
+                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                        <div class="form-group mb-3">
+                            <label asp-for="FechaOmision" class="control-label"></label>
+                            <input asp-for="FechaOmision" class="form-control" type="datetime-local" />
+                            <span asp-validation-for="FechaOmision" class="text-danger"></span>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label asp-for="TipoOmision" class="control-label"></label>
+                            <select asp-for="TipoOmision" class="form-control">
+                                <option value="">Seleccione el tipo de omisión</option>
+                                <option value="Entrada">Entrada</option>
+                                <option value="Salida">Salida</option>
+                            </select>
+                            <span asp-validation-for="TipoOmision" class="text-danger"></span>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label asp-for="Motivo" class="control-label"></label>
+                            <textarea asp-for="Motivo" class="form-control" rows="3"></textarea>
+                            <span asp-validation-for="Motivo" class="text-danger"></span>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <button type="submit" class="btn btn-primary">Enviar Justificación</button>
+                            <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
+

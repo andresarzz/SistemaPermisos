@@ -1,0 +1,80 @@
+﻿@model SistemaPermisos.Models.Permiso
+
+@{
+    ViewData["Title"] = "Detalles del Permiso";
+    var esAdmin = Context.Session.GetString("UsuarioRol") == "Admin";
+}
+
+<div class="container">
+    <h1>@ViewData["Title"]</h1>
+
+    <div class="card">
+        <div class="card-body">
+            <dl class="row">
+                @if (esAdmin)
+                {
+                    <dt class="col-sm-3">Docente</dt>
+                    <dd class="col-sm-9">@Model.Usuario.Nombre</dd>
+                }
+
+                <dt class="col-sm-3">Fecha de Solicitud</dt>
+                <dd class="col-sm-9">@Model.FechaSolicitud.ToString("dd/MM/yyyy HH:mm")</dd>
+
+                <dt class="col-sm-3">Fecha de Salida</dt>
+                <dd class="col-sm-9">@Model.FechaSalida.ToString("dd/MM/yyyy HH:mm")</dd>
+
+                <dt class="col-sm-3">Fecha de Regreso</dt>
+                <dd class="col-sm-9">@Model.FechaRegreso.ToString("dd/MM/yyyy HH:mm")</dd>
+
+                <dt class="col-sm-3">Motivo</dt>
+                <dd class="col-sm-9">@Model.Motivo</dd>
+
+                <dt class="col-sm-3">Estado</dt>
+                <dd class="col-sm-9">
+                    <span class="badge @(Model.Estado == "Aprobado" ? "bg-success" : (Model.Estado == "Rechazado" ? "bg-danger" : "bg-warning"))">
+                        @Model.Estado
+                    </span>
+                </dd>
+
+                <dt class="col-sm-3">Justificado</dt>
+                <dd class="col-sm-9">
+                    <span class="badge @(Model.Justificado ? "bg-success" : "bg-secondary")">
+                        @(Model.Justificado ? "Sí" : "No")
+                    </span>
+                </dd>
+
+                @if (!string.IsNullOrEmpty(Model.RutaComprobante))
+                {
+                    <dt class="col-sm-3">Comprobante</dt>
+                    <dd class="col-sm-9">
+                        <img src="@Model.RutaComprobante" alt="Comprobante" class="img-fluid img-thumbnail" style="max-width: 300px;" />
+                    </dd>
+                }
+
+                @if (!string.IsNullOrEmpty(Model.RutaJustificacion))
+                {
+                    <dt class="col-sm-3">Justificación</dt>
+                    <dd class="col-sm-9">
+                        <img src="@Model.RutaJustificacion" alt="Justificación" class="img-fluid img-thumbnail" style="max-width: 300px;" />
+                    </dd>
+                }
+            </dl>
+
+            <div>
+                @if (!Model.Justificado && Model.Estado == "Aprobado" && !esAdmin)
+                {
+                    <a asp-action="Justify" asp-route-id="@Model.Id" class="btn btn-warning">Justificar</a>
+                }
+
+                @if (esAdmin && Model.Estado == "Pendiente")
+                {
+                    <a asp-action="Approve" asp-route-id="@Model.Id" class="btn btn-success">Aprobar</a>
+                    <a asp-action="Reject" asp-route-id="@Model.Id" class="btn btn-danger">Rechazar</a>
+                }
+
+                <a asp-action="Index" class="btn btn-secondary">Volver a la Lista</a>
+            </div>
+        </div>
+    </div>
+</div>
+

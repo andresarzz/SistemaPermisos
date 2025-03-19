@@ -1,0 +1,66 @@
+﻿@model IEnumerable<SistemaPermisos.Models.ReporteDano>
+
+@{
+    ViewData["Title"] = "Reportes de Daños";
+    var esAdmin = Context.Session.GetString("UsuarioRol") == "Admin";
+}
+
+<div class="container">
+    <h1>@(esAdmin ? "Todos los Reportes de Daños" : "Mis Reportes de Daños")</h1>
+
+    <p>
+        <a asp-action="Create" class="btn btn-primary">Crear Nuevo Reporte</a>
+    </p>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            @if (esAdmin)
+                            {
+                                <th>Docente</th>
+                            }
+                            <th>Fecha Reporte</th>
+                            <th>Ubicación</th>
+                            <th>Descripción</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                @if (esAdmin)
+                                {
+                                    <td>@item.Usuario.Nombre</td>
+                                }
+                                <td>@item.FechaReporte.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>@item.Ubicacion</td>
+                                <td>@item.Descripcion</td>
+                                <td>
+                                    <span class="badge @(item.Estado == "Resuelto" ? "bg-success" : "bg-warning")">
+                                        @item.Estado
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-info">Detalles</a>
+
+                                        @if (esAdmin && item.Estado == "Pendiente")
+                                        {
+                                            <a asp-action="MarkAsResolved" asp-route-id="@item.Id" class="btn btn-sm btn-success">Marcar Resuelto</a>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+

@@ -1,0 +1,52 @@
+﻿@model SistemaPermisos.Models.OmisionMarca
+
+@{
+    ViewData["Title"] = "Detalles de Omisión";
+    var esAdmin = Context.Session.GetString("UsuarioRol") == "Admin";
+}
+
+<div class="container">
+    <h1>@ViewData["Title"]</h1>
+
+    <div class="card">
+        <div class="card-body">
+            <dl class="row">
+                @if (esAdmin)
+                {
+                    <dt class="col-sm-3">Docente</dt>
+                    <dd class="col-sm-9">@Model.Usuario.Nombre</dd>
+                }
+
+                <dt class="col-sm-3">Fecha de Registro</dt>
+                <dd class="col-sm-9">@Model.FechaRegistro.ToString("dd/MM/yyyy HH:mm")</dd>
+
+                <dt class="col-sm-3">Fecha de Omisión</dt>
+                <dd class="col-sm-9">@Model.FechaOmision.ToString("dd/MM/yyyy HH:mm")</dd>
+
+                <dt class="col-sm-3">Tipo de Omisión</dt>
+                <dd class="col-sm-9">@Model.TipoOmision</dd>
+
+                <dt class="col-sm-3">Motivo</dt>
+                <dd class="col-sm-9">@Model.Motivo</dd>
+
+                <dt class="col-sm-3">Estado</dt>
+                <dd class="col-sm-9">
+                    <span class="badge @(Model.Estado == "Aprobado" ? "bg-success" : (Model.Estado == "Rechazado" ? "bg-danger" : "bg-warning"))">
+                        @Model.Estado
+                    </span>
+                </dd>
+            </dl>
+
+            <div>
+                @if (esAdmin && Model.Estado == "Pendiente")
+                {
+                    <a asp-action="Approve" asp-route-id="@Model.Id" class="btn btn-success">Aprobar</a>
+                    <a asp-action="Reject" asp-route-id="@Model.Id" class="btn btn-danger">Rechazar</a>
+                }
+
+                <a asp-action="Index" class="btn btn-secondary">Volver a la Lista</a>
+            </div>
+        </div>
+    </div>
+</div>
+

@@ -1,0 +1,211 @@
+:root {
+    --primary-color: #333333;
+    --secondary-color: #666666;
+    --accent-color: #990000;
+    --light-gray: #f5f5f5;
+    --medium-gray: #e0e0e0;
+    --dark-gray: #444444;
+    --white: #ffffff;
+    --border-color: #dddddd;
+}
+
+html {
+    font-size: 14px;
+    position: relative;
+    min-height: 100%;
+}
+
+@media (min-width: 768px) {
+    html {
+        font-size: 16px;
+    }
+}
+
+body {
+    margin-bottom: 60px;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    color: var(--primary-color);
+    background-color: var(--white);
+}
+
+/* Header and Navigation */
+.navbar {
+    background-color: var(--white) !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.navbar-brand {
+    display: flex;
+    align-items: center;
+}
+
+    .navbar-brand img {
+        height: 40px;
+        margin-right: 10px;
+    }
+
+.navbar-light .navbar-nav .nav-link {
+    color: var(--secondary-color);
+    font-weight: 500;
+    transition: color 0.3s;
+}
+
+    .navbar-light .navbar-nav .nav-link:hover,
+    .navbar-light .navbar-nav .nav-link:focus {
+        color: var(--accent-color);
+    }
+
+.navbar-light .navbar-toggler {
+    border-color: var(--border-color);
+}
+
+/* Cards and Containers */
+.card {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+.card-header {
+    background-color: var(--light-gray);
+    border-bottom: 1px solid var(--border-color);
+    font-weight: 600;
+}
+
+.jumbotron {
+    background-color: var(--light-gray);
+    border-radius: 8px;
+}
+
+/* Buttons */
+.btn-primary {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+}
+
+    .btn-primary:hover,
+    .btn-primary:focus {
+        background-color: #800000;
+        border-color: #800000;
+    }
+
+.btn-secondary {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+}
+
+    .btn-secondary:hover,
+    .btn-secondary:focus {
+        background-color: var(--dark-gray);
+        border-color: var(--dark-gray);
+    }
+
+.btn:focus,
+.btn:active:focus,
+.btn-link.nav-link:focus,
+.form-control:focus,
+.form-check-input:focus {
+    box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem var(--accent-color);
+}
+
+/* Tables */
+.table {
+    color: var(--primary-color);
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: var(--light-gray);
+}
+
+.table thead th {
+    background-color: var(--medium-gray);
+    color: var(--dark-gray);
+    border-bottom: 2px solid var(--border-color);
+}
+
+/* Forms */
+.form-control {
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+}
+
+    .form-control:focus {
+        border-color: var(--secondary-color);
+        box-shadow: 0 0 0 0.2rem rgba(102, 102, 102, 0.25);
+    }
+
+/* Badges */
+.badge.bg-success {
+    background-color: #2e7d32 !important;
+}
+
+.badge.bg-warning {
+    background-color: #f9a825 !important;
+}
+
+.badge.bg-danger {
+    background-color: var(--accent-color) !important;
+}
+
+.badge.bg-secondary {
+    background-color: var(--secondary-color) !important;
+}
+
+/* Footer */
+.footer {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    white-space: nowrap;
+    line-height: 60px;
+    background-color: var(--light-gray);
+    border-top: 1px solid var(--border-color);
+    color: var(--secondary-color);
+}
+
+/* Images */
+.img-thumbnail {
+    border: 1px solid var(--border-color);
+}
+
+/* Alerts */
+.alert-info {
+    background-color: var(--light-gray);
+    border-color: var(--border-color);
+    color: var(--dark-gray);
+}
+
+/* Custom logo size in jumbotron */
+.jumbotron-logo {
+    max-width: 150px;
+    margin-bottom: 20px;
+}
+
+/* Dashboard cards */
+.dashboard-card {
+    height: 100%;
+    transition: transform 0.3s;
+}
+
+    .dashboard-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .dashboard-card .card-title {
+        color: var(--accent-color);
+        font-weight: 600;
+    }
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .container {
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+}

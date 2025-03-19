@@ -1,0 +1,69 @@
+﻿@model IEnumerable<SistemaPermisos.Models.OmisionMarca>
+
+@{
+    ViewData["Title"] = "Omisiones de Marcación";
+    var esAdmin = Context.Session.GetString("UsuarioRol") == "Admin";
+}
+
+<div class="container">
+    <h1>@(esAdmin ? "Todas las Omisiones de Marcación" : "Mis Omisiones de Marcación")</h1>
+
+    <p>
+        <a asp-action="Create" class="btn btn-primary">Registrar Nueva Omisión</a>
+    </p>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            @if (esAdmin)
+                            {
+                                <th>Docente</th>
+                            }
+                            <th>Fecha Registro</th>
+                            <th>Fecha Omisión</th>
+                            <th>Tipo</th>
+                            <th>Motivo</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                @if (esAdmin)
+                                {
+                                    <td>@item.Usuario.Nombre</td>
+                                }
+                                <td>@item.FechaRegistro.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>@item.FechaOmision.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>@item.TipoOmision</td>
+                                <td>@item.Motivo</td>
+                                <td>
+                                    <span class="badge @(item.Estado == "Aprobado" ? "bg-success" : (item.Estado == "Rechazado" ? "bg-danger" : "bg-warning"))">
+                                        @item.Estado
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-info">Detalles</a>
+
+                                        @if (esAdmin && item.Estado == "Pendiente")
+                                        {
+                                            <a asp-action="Approve" asp-route-id="@item.Id" class="btn btn-sm btn-success">Aprobar</a>
+                                            <a asp-action="Reject" asp-route-id="@item.Id" class="btn btn-sm btn-danger">Rechazar</a>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+

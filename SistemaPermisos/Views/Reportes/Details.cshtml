@@ -1,0 +1,56 @@
+﻿@model SistemaPermisos.Models.ReporteDano
+
+@{
+    ViewData["Title"] = "Detalles del Reporte";
+    var esAdmin = Context.Session.GetString("UsuarioRol") == "Admin";
+}
+
+<div class="container">
+    <h1>@ViewData["Title"]</h1>
+
+    <div class="card">
+        <div class="card-body">
+            <dl class="row">
+                @if (esAdmin)
+                {
+                    <dt class="col-sm-3">Docente</dt>
+                    <dd class="col-sm-9">@Model.Usuario.Nombre</dd>
+                }
+
+                <dt class="col-sm-3">Fecha de Reporte</dt>
+                <dd class="col-sm-9">@Model.FechaReporte.ToString("dd/MM/yyyy HH:mm")</dd>
+
+                <dt class="col-sm-3">Ubicación</dt>
+                <dd class="col-sm-9">@Model.Ubicacion</dd>
+
+                <dt class="col-sm-3">Descripción</dt>
+                <dd class="col-sm-9">@Model.Descripcion</dd>
+
+                <dt class="col-sm-3">Estado</dt>
+                <dd class="col-sm-9">
+                    <span class="badge @(Model.Estado == "Resuelto" ? "bg-success" : "bg-warning")">
+                        @Model.Estado
+                    </span>
+                </dd>
+
+                @if (!string.IsNullOrEmpty(Model.RutaImagen))
+                {
+                    <dt class="col-sm-3">Imagen</dt>
+                    <dd class="col-sm-9">
+                        <img src="@Model.RutaImagen" alt="Imagen del daño" class="img-fluid img-thumbnail" style="max-width: 300px;" />
+                    </dd>
+                }
+            </dl>
+
+            <div>
+                @if (esAdmin && Model.Estado == "Pendiente")
+                {
+                    <a asp-action="MarkAsResolved" asp-route-id="@Model.Id" class="btn btn-success">Marcar como Resuelto</a>
+                }
+
+                <a asp-action="Index" class="btn btn-secondary">Volver a la Lista</a>
+            </div>
+        </div>
+    </div>
+</div>
+

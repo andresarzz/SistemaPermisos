@@ -1,0 +1,92 @@
+﻿@model SistemaPermisos.ViewModels.PermisoViewModel
+
+@{
+    ViewData["Title"] = "Solicitar Permiso";
+}
+
+<div class="container">
+    <div class="card">
+        <div class="card-header">
+            <h1><i class="fas fa-calendar-plus"></i> @ViewData["Title"]</h1>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-8">
+                    <form asp-action="Create" enctype="multipart/form-data">
+                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                        <div class="form-group mb-3">
+                            <label asp-for="FechaSalida" class="control-label"></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                                <input asp-for="FechaSalida" class="form-control" type="datetime-local" />
+                            </div>
+                            <span asp-validation-for="FechaSalida" class="text-danger"></span>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label asp-for="FechaRegreso" class="control-label"></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-calendar-check"></i></span>
+                                <input asp-for="FechaRegreso" class="form-control" type="datetime-local" />
+                            </div>
+                            <span asp-validation-for="FechaRegreso" class="text-danger"></span>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label asp-for="Motivo" class="control-label"></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-comment"></i></span>
+                                <textarea asp-for="Motivo" class="form-control" rows="3" placeholder="Describa el motivo de su solicitud"></textarea>
+                            </div>
+                            <span asp-validation-for="Motivo" class="text-danger"></span>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label asp-for="Comprobante" class="control-label"></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-file-image"></i></span>
+                                <input asp-for="Comprobante" class="form-control image-upload" type="file" accept="image/*" data-preview="image-preview" />
+                            </div>
+                            <small class="form-text text-muted">Adjunte una imagen como comprobante (cita médica, etc.)</small>
+                            <span asp-validation-for="Comprobante" class="text-danger"></span>
+                            <div class="mt-2">
+                                <img id="image-preview" src="#" alt="Vista previa" style="display: none; max-width: 300px; max-height: 200px;" class="img-thumbnail" />
+                            </div>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane"></i> Enviar Solicitud
+                            </button>
+                            <a asp-action="Index" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h5 class="card-title"><i class="fas fa-info-circle"></i> Información</h5>
+                            <p>Complete todos los campos requeridos para solicitar un permiso.</p>
+                            <ul>
+                                <li>La fecha de salida debe ser anterior a la fecha de regreso.</li>
+                                <li>El motivo debe ser claro y específico.</li>
+                                <li>El comprobante debe ser una imagen legible (JPG, PNG).</li>
+                                <li>Su solicitud será revisada por administración.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
+
