@@ -25,6 +25,28 @@ namespace SistemaPermisos.Models
         [Display(Name = "Rol")]
         public string Rol { get; set; } = "Docente"; // Por defecto es Docente, puede ser Admin
 
+        [Display(Name = "Foto de Perfil")]
+        public string? FotoPerfil { get; set; }
+
+        [Display(Name = "Teléfono")]
+        public string? Telefono { get; set; }
+
+        [Display(Name = "Departamento")]
+        public string? Departamento { get; set; }
+
+        [Display(Name = "Fecha de Nacimiento")]
+        [DataType(DataType.Date)]
+        public DateTime? FechaNacimiento { get; set; }
+
+        [Display(Name = "Dirección")]
+        public string? Direccion { get; set; }
+
+        [Display(Name = "Fecha de Registro")]
+        public DateTime FechaRegistro { get; set; } = DateTime.Now;
+
+        [Display(Name = "Última Actualización")]
+        public DateTime UltimaActualizacion { get; set; } = DateTime.Now;
+
         // Relaciones
         public virtual ICollection<Permiso> Permisos { get; set; }
         public virtual ICollection<OmisionMarca> OmisionesMarca { get; set; }

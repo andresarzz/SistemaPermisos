@@ -26,7 +26,7 @@ namespace SistemaPermisos.Models
         public string Motivo { get; set; }
 
         [Display(Name = "Ruta de Comprobante")]
-        public string RutaComprobante { get; set; }
+        public string? RutaComprobante { get; set; }
 
         [Display(Name = "Estado")]
         public string Estado { get; set; } = "Pendiente"; // Pendiente, Aprobado, Rechazado
@@ -39,7 +39,7 @@ namespace SistemaPermisos.Models
         public bool Justificado { get; set; } = false;
 
         [Display(Name = "Ruta de Justificación")]
-        public string RutaJustificacion { get; set; }
+        public string? RutaJustificacion { get; set; }
 
         // Relaciones
         public virtual Usuario Usuario { get; set; }
