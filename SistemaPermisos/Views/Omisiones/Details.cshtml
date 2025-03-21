@@ -1,50 +1,93 @@
 ﻿@model SistemaPermisos.Models.OmisionMarca
 
 @{
-    ViewData["Title"] = "Detalles de Omisión";
+    ViewData["Title"] = "Detalles de Omisión de Marca";
     var esAdmin = Context.Session.GetString("UsuarioRol") == "Admin";
 }
 
 <div class="container">
-    <h1>@ViewData["Title"]</h1>
-
-    <div class="card">
+    <div class="card mb-4">
+        <div class="card-header">
+            <h1><i class="fas fa-clock"></i> @ViewData["Title"]</h1>
+        </div>
         <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h4 class="border-bottom pb-2">Información del Solicitante</h4>
+                    <dl class="row">
+                        <dt class="col-sm-4">Nombre:</dt>
+                        <dd class="col-sm-8">@Model.Usuario.Nombre</dd>
+
+                        <dt class="col-sm-4">Cédula:</dt>
+                        <dd class="col-sm-8">@(string.IsNullOrEmpty(Model.Cedula) ? "No especificada" : Model.Cedula)</dd>
+
+                        <dt class="col-sm-4">Puesto:</dt>
+                        <dd class="col-sm-8">@(string.IsNullOrEmpty(Model.Puesto) ? "No especificado" : Model.Puesto)</dd>
+
+                        <dt class="col-sm-4">Instancia:</dt>
+                        <dd class="col-sm-8">@(string.IsNullOrEmpty(Model.Instancia) ? "No especificada" : Model.Instancia)</dd>
+                    </dl>
+                </div>
+                <div class="col-md-6">
+                    <h4 class="border-bottom pb-2">Información de la Solicitud</h4>
+                    <dl class="row">
+                        <dt class="col-sm-4">Fecha de Registro:</dt>
+                        <dd class="col-sm-8">@Model.FechaRegistro.ToString("dd/MM/yyyy HH:mm")</dd>
+
+                        <dt class="col-sm-4">Estado:</dt>
+                        <dd class="col-sm-8">
+                            <span class="badge @(Model.Estado == "Aprobado" ? "bg-success" : (Model.Estado == "Rechazado" ? "bg-danger" : "bg-warning"))">
+                                @Model.Estado
+                            </span>
+                        </dd>
+
+                        <dt class="col-sm-4">Categoría:</dt>
+                        <dd class="col-sm-8">@(string.IsNullOrEmpty(Model.CategoriaPersonal) ? "No especificada" : Model.CategoriaPersonal)</dd>
+
+                        <dt class="col-sm-4">Título:</dt>
+                        <dd class="col-sm-8">@(string.IsNullOrEmpty(Model.Titulo) ? "No especificado" : Model.Titulo)</dd>
+                    </dl>
+                </div>
+            </div>
+
+            <h4 class="border-bottom pb-2 mt-4">Detalles de la Omisión</h4>
             <dl class="row">
-                @if (esAdmin)
-                {
-                    <dt class="col-sm-3">Docente</dt>
-                    <dd class="col-sm-9">@Model.Usuario.Nombre</dd>
-                }
+                <dt class="col-sm-3">Fecha de Omisión:</dt>
+                <dd class="col-sm-9">@Model.FechaOmision.ToString("dd/MM/yyyy")</dd>
 
-                <dt class="col-sm-3">Fecha de Registro</dt>
-                <dd class="col-sm-9">@Model.FechaRegistro.ToString("dd/MM/yyyy HH:mm")</dd>
-
-                <dt class="col-sm-3">Fecha de Omisión</dt>
-                <dd class="col-sm-9">@Model.FechaOmision.ToString("dd/MM/yyyy HH:mm")</dd>
-
-                <dt class="col-sm-3">Tipo de Omisión</dt>
+                <dt class="col-sm-3">Tipo de Omisión:</dt>
                 <dd class="col-sm-9">@Model.TipoOmision</dd>
 
-                <dt class="col-sm-3">Motivo</dt>
+                <dt class="col-sm-3">Justificación:</dt>
                 <dd class="col-sm-9">@Model.Motivo</dd>
-
-                <dt class="col-sm-3">Estado</dt>
-                <dd class="col-sm-9">
-                    <span class="badge @(Model.Estado == "Aprobado" ? "bg-success" : (Model.Estado == "Rechazado" ? "bg-danger" : "bg-warning"))">
-                        @Model.Estado
-                    </span>
-                </dd>
             </dl>
 
-            <div>
+            @if (!string.IsNullOrEmpty(Model.Resolucion))
+            {
+                <h4 class="border-bottom pb-2 mt-4">Resolución de la Justificación</h4>
+                <dl class="row">
+                    <dt class="col-sm-3">Resolución:</dt>
+                    <dd class="col-sm-9">@Model.Resolucion</dd>
+
+                    @if (!string.IsNullOrEmpty(Model.ObservacionesResolucion))
+                    {
+                        <dt class="col-sm-3">Observaciones:</dt>
+                        <dd class="col-sm-9">@Model.ObservacionesResolucion</dd>
+                    }
+                </dl>
+            }
+
+            <div class="mt-4">
                 @if (esAdmin && Model.Estado == "Pendiente")
                 {
-                    <a asp-action="Approve" asp-route-id="@Model.Id" class="btn btn-success">Aprobar</a>
-                    <a asp-action="Reject" asp-route-id="@Model.Id" class="btn btn-danger">Rechazar</a>
+                    <a asp-action="Resolve" asp-route-id="@Model.Id" class="btn btn-primary">
+                        <i class="fas fa-gavel"></i> Resolver Justificación
+                    </a>
                 }
 
-                <a asp-action="Index" class="btn btn-secondary">Volver a la Lista</a>
+                <a asp-action="Index" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Volver a la Lista
+                </a>
             </div>
         </div>
     </div>

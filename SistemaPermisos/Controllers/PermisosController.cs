@@ -93,7 +93,20 @@ namespace SistemaPermisos.Controllers
                 return RedirectToAction("Login", "Account");
             }
 
-            return View();
+            // Obtener información del usuario para prellenar el formulario
+            var usuario = _context.Usuarios.Find(usuarioId);
+            if (usuario != null)
+            {
+                var viewModel = new PermisoViewModel
+                {
+                    Fecha = DateTime.Now,
+                    Cedula = usuario.Cedula ?? "",
+                    Puesto = usuario.Puesto ?? ""
+                };
+                return View(viewModel);
+            }
+
+            return View(new PermisoViewModel { Fecha = DateTime.Now });
         }
 
         // POST: Permisos/Create
@@ -132,14 +145,40 @@ namespace SistemaPermisos.Controllers
                 var permiso = new Permiso
                 {
                     UsuarioId = usuarioId.Value,
-                    FechaSalida = model.FechaSalida,
-                    FechaRegreso = model.FechaRegreso,
-                    Motivo = model.Motivo,
+                    Fecha = model.Fecha,
+                    HoraDesde = model.HoraDesde,
+                    HoraHasta = model.HoraHasta,
+                    JornadaCompleta = model.JornadaCompleta,
+                    MediaJornada = model.MediaJornada,
+                    CantidadLecciones = model.CantidadLecciones,
+                    Cedula = model.Cedula,
+                    Puesto = model.Puesto,
+                    Condicion = model.Condicion,
+                    TipoMotivo = model.TipoMotivo,
+                    TipoConvocatoria = model.TipoConvocatoria,
+                    Motivo = model.TipoMotivo == "Asuntos personales" ? model.Motivo : model.TipoMotivo,
+                    Observaciones = model.Observaciones,
+                    HoraSalida = model.HoraSalida,
                     RutaComprobante = rutaComprobante,
-                    RutaJustificacion = "", // Asignar cadena vacía en lugar de null
                     Estado = "Pendiente",
-                    FechaSolicitud = DateTime.Now
+                    FechaSolicitud = DateTime.Now,
+                    RutaJustificacion = null
                 };
+
+                // Actualizar información del usuario si es necesario
+                var usuario = await _context.Usuarios.FindAsync(usuarioId);
+                if (usuario != null)
+                {
+                    if (string.IsNullOrEmpty(usuario.Cedula))
+                    {
+                        usuario.Cedula = model.Cedula;
+                    }
+                    if (string.IsNullOrEmpty(usuario.Puesto))
+                    {
+                        usuario.Puesto = model.Puesto;
+                    }
+                    _context.Update(usuario);
+                }
 
                 _context.Add(permiso);
                 await _context.SaveChangesAsync();
@@ -224,7 +263,89 @@ namespace SistemaPermisos.Controllers
             return View(model);
         }
 
-        // GET: Permisos/Approve/5 (Solo para administradores)
+        // GET: Permisos/Resolve/5 (Solo para administradores)
+        public async Task<IActionResult> Resolve(int? id)
+        {
+            // Verificar que sea administrador
+            var rol = HttpContext.Session.GetString("UsuarioRol");
+            if (rol != "Admin")
+            {
+                return RedirectToAction("Index", "Home");
+            }
+
+            if (id == null)
+            {
+                return NotFound();
+            }
+
+            var permiso = await _context.Permisos
+                .Include(p => p.Usuario)
+                .FirstOrDefaultAsync(m => m.Id == id);
+
+            if (permiso == null)
+            {
+                return NotFound();
+            }
+
+            var viewModel = new ResolucionPermisoViewModel
+            {
+                PermisoId = permiso.Id
+            };
+
+            ViewBag.Permiso = permiso;
+
+            return View(viewModel);
+        }
+
+        // POST: Permisos/Resolve/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Resolve(ResolucionPermisoViewModel model)
+        {
+            // Verificar que sea administrador
+            var rol = HttpContext.Session.GetString("UsuarioRol");
+            if (rol != "Admin")
+            {
+                return RedirectToAction("Index", "Home");
+            }
+
+            if (ModelState.IsValid)
+            {
+                var permiso = await _context.Permisos.FindAsync(model.PermisoId);
+                if (permiso == null)
+                {
+                    return NotFound();
+                }
+
+                permiso.Resolucion = model.Resolucion;
+                permiso.ObservacionesResolucion = model.ObservacionesResolucion;
+                permiso.TipoRebajo = model.TipoRebajo;
+
+                // Actualizar el estado según la resolución
+                if (model.Resolucion == "Aceptar lo solicitado" || model.Resolucion == "Acoger convocatoria")
+                {
+                    permiso.Estado = "Aprobado";
+                }
+                else if (model.Resolucion == "Denegar lo solicitado")
+                {
+                    permiso.Estado = "Rechazado";
+                }
+
+                await _context.SaveChangesAsync();
+                return RedirectToAction(nameof(Index));
+            }
+
+            // Si hay errores, volver a cargar el permiso para la vista
+            var permisoDb = await _context.Permisos
+                .Include(p => p.Usuario)
+                .FirstOrDefaultAsync(m => m.Id == model.PermisoId);
+
+            ViewBag.Permiso = permisoDb;
+
+            return View(model);
+        }
+
+        // GET: Permisos/Approve/5 (Solo para administradores) - Método obsoleto, usar Resolve
         public async Task<IActionResult> Approve(int? id)
         {
             // Verificar que sea administrador
@@ -246,12 +367,13 @@ namespace SistemaPermisos.Controllers
             }
 
             permiso.Estado = "Aprobado";
+            permiso.Resolucion = "Aceptar lo solicitado";
             await _context.SaveChangesAsync();
 
             return RedirectToAction(nameof(Index));
         }
 
-        // GET: Permisos/Reject/5 (Solo para administradores)
+        // GET: Permisos/Reject/5 (Solo para administradores) - Método obsoleto, usar Resolve
         public async Task<IActionResult> Reject(int? id)
         {
             // Verificar que sea administrador
@@ -273,6 +395,7 @@ namespace SistemaPermisos.Controllers
             }
 
             permiso.Estado = "Rechazado";
+            permiso.Resolucion = "Denegar lo solicitado";
             await _context.SaveChangesAsync();
 
             return RedirectToAction(nameof(Index));

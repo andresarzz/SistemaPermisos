@@ -1,48 +1,150 @@
 ﻿@model SistemaPermisos.ViewModels.OmisionViewModel
 
 @{
-    ViewData["Title"] = "Registrar Omisión de Marcación";
+    ViewData["Title"] = "Justificación de Omisión de Marca";
 }
 
 <div class="container">
-    <h1>@ViewData["Title"]</h1>
+    <div class="card">
+        <div class="card-header">
+            <h1><i class="fas fa-clock"></i> @ViewData["Title"]</h1>
+        </div>
+        <div class="card-body">
+            <form asp-action="Create">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
-    <div class="row">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-body">
-                    <form asp-action="Create">
-                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="Cedula" class="form-label">Cédula:</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-id-card"></i></span>
+                                <input asp-for="Cedula" class="form-control" placeholder="Número de cédula" />
+                            </div>
+                            <span asp-validation-for="Cedula" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="form-label">Nombre:</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                <input class="form-control" value="@Context.Session.GetString("UsuarioNombre")" readonly />
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-                        <div class="form-group mb-3">
-                            <label asp-for="FechaOmision" class="control-label"></label>
-                            <input asp-for="FechaOmision" class="form-control" type="datetime-local" />
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="Puesto" class="form-label">Puesto:</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-briefcase"></i></span>
+                                <input asp-for="Puesto" class="form-control" placeholder="Puesto que desempeña" />
+                            </div>
+                            <span asp-validation-for="Puesto" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="Instancia" class="form-label">Instancia:</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-building"></i></span>
+                                <input asp-for="Instancia" class="form-control" placeholder="Instancia" value="CTP Mercedes Norte" />
+                            </div>
+                            <span asp-validation-for="Instancia" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="CategoriaPersonal" class="form-label">Categoría de Personal:</label>
+                            <div class="d-flex">
+                                <div class="form-check me-4">
+                                    <input type="radio" class="form-check-input" asp-for="CategoriaPersonal" value="Personal docente" id="personalDocente" />
+                                    <label class="form-check-label" for="personalDocente">Personal docente</label>
+                                </div>
+                                <div class="form-check">
+                                    <input type="radio" class="form-check-input" asp-for="CategoriaPersonal" value="Personal administrativo" id="personalAdmin" />
+                                    <label class="form-check-label" for="personalAdmin">Personal administrativo</label>
+                                </div>
+                            </div>
+                            <span asp-validation-for="CategoriaPersonal" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="Titulo" class="form-label">Título:</label>
+                            <div class="d-flex">
+                                <div class="form-check me-4">
+                                    <input type="radio" class="form-check-input" asp-for="Titulo" value="Título I" id="tituloI" />
+                                    <label class="form-check-label" for="tituloI">Título I</label>
+                                </div>
+                                <div class="form-check">
+                                    <input type="radio" class="form-check-input" asp-for="Titulo" value="Título II" id="tituloII" />
+                                    <label class="form-check-label" for="tituloII">Título II</label>
+                                </div>
+                            </div>
+                            <span asp-validation-for="Titulo" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="FechaOmision" class="form-label">Fecha:</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                                <input asp-for="FechaOmision" class="form-control" type="date" />
+                            </div>
                             <span asp-validation-for="FechaOmision" class="text-danger"></span>
                         </div>
-
-                        <div class="form-group mb-3">
-                            <label asp-for="TipoOmision" class="control-label"></label>
-                            <select asp-for="TipoOmision" class="form-control">
-                                <option value="">Seleccione el tipo de omisión</option>
-                                <option value="Entrada">Entrada</option>
-                                <option value="Salida">Salida</option>
-                            </select>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="TipoOmision" class="form-label">Tipo de Omisión:</label>
+                            <div class="d-flex flex-wrap">
+                                <div class="form-check me-4 mb-2">
+                                    <input type="radio" class="form-check-input" asp-for="TipoOmision" value="Entrada" id="omisionEntrada" />
+                                    <label class="form-check-label" for="omisionEntrada">Entrada</label>
+                                </div>
+                                <div class="form-check me-4 mb-2">
+                                    <input type="radio" class="form-check-input" asp-for="TipoOmision" value="Salida" id="omisionSalida" />
+                                    <label class="form-check-label" for="omisionSalida">Salida</label>
+                                </div>
+                                <div class="form-check me-4 mb-2">
+                                    <input type="radio" class="form-check-input" asp-for="TipoOmision" value="Todo el día" id="omisionTodoDia" />
+                                    <label class="form-check-label" for="omisionTodoDia">Todo el día</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input type="radio" class="form-check-input" asp-for="TipoOmision" value="Salida anticipada" id="omisionSalidaAnticipada" />
+                                    <label class="form-check-label" for="omisionSalidaAnticipada">Salida anticipada</label>
+                                </div>
+                            </div>
                             <span asp-validation-for="TipoOmision" class="text-danger"></span>
                         </div>
-
-                        <div class="form-group mb-3">
-                            <label asp-for="Motivo" class="control-label"></label>
-                            <textarea asp-for="Motivo" class="form-control" rows="3"></textarea>
-                            <span asp-validation-for="Motivo" class="text-danger"></span>
-                        </div>
-
-                        <div class="form-group mb-3">
-                            <button type="submit" class="btn btn-primary">Enviar Justificación</button>
-                            <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
-                        </div>
-                    </form>
+                    </div>
                 </div>
-            </div>
+
+                <div class="form-group mb-3">
+                    <label asp-for="Motivo" class="form-label">Justificación:</label>
+                    <textarea asp-for="Motivo" class="form-control" rows="3" placeholder="Explique el motivo de la omisión de marca"></textarea>
+                    <span asp-validation-for="Motivo" class="text-danger"></span>
+                </div>
+
+                <div class="form-group mb-3">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane"></i> Enviar Justificación
+                    </button>
+                    <a asp-action="Index" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Cancelar
+                    </a>
+                </div>
+            </form>
         </div>
     </div>
 </div>

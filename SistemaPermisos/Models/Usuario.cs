@@ -41,6 +41,12 @@ namespace SistemaPermisos.Models
         [Display(Name = "Dirección")]
         public string? Direccion { get; set; }
 
+        [Display(Name = "Cédula")]
+        public string? Cedula { get; set; }
+
+        [Display(Name = "Puesto")]
+        public string? Puesto { get; set; }
+
         [Display(Name = "Fecha de Registro")]
         public DateTime FechaRegistro { get; set; } = DateTime.Now;
 

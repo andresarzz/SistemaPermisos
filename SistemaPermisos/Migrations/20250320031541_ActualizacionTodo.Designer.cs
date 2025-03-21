@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SistemaPermisos.Data;
 
@@ -11,9 +12,11 @@ using SistemaPermisos.Data;
 namespace SistemaPermisos.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250320031541_ActualizacionTodo")]
+    partial class ActualizacionTodo
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -76,7 +79,7 @@ namespace SistemaPermisos.Migrations
 
                     b.HasIndex("UsuarioId");
 
-                    b.ToTable("OmisionesMarca", (string)null);
+                    b.ToTable("OmisionesMarca");
                 });
 
             modelBuilder.Entity("SistemaPermisos.Models.Permiso", b =>
@@ -162,7 +165,7 @@ namespace SistemaPermisos.Migrations
 
                     b.HasIndex("UsuarioId");
 
-                    b.ToTable("Permisos", (string)null);
+                    b.ToTable("Permisos");
                 });
 
             modelBuilder.Entity("SistemaPermisos.Models.ReporteDano", b =>
@@ -199,7 +202,7 @@ namespace SistemaPermisos.Migrations
 
                     b.HasIndex("UsuarioId");
 
-                    b.ToTable("ReportesDanos", (string)null);
+                    b.ToTable("ReportesDanos");
                 });
 
             modelBuilder.Entity("SistemaPermisos.Models.Usuario", b =>
@@ -255,7 +258,7 @@ namespace SistemaPermisos.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Usuarios", (string)null);
+                    b.ToTable("Usuarios");
 
                     b.HasData(
                         new
