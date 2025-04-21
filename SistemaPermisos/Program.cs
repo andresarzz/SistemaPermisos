@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaPermisos.Data;
+using SistemaPermisos.Repositories;
+using SistemaPermisos.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,6 +21,17 @@ builder.Services.AddSession(options =>
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
 });
+
+// Configurar HttpContextAccessor
+builder.Services.AddHttpContextAccessor();
+
+// Registrar servicios
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+builder.Services.AddScoped<IAuditService, AuditService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IExportService, ExportService>();
 
 var app = builder.Build();
 

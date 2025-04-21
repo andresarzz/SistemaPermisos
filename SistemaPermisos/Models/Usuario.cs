@@ -26,26 +26,26 @@ namespace SistemaPermisos.Models
         public string Rol { get; set; } = "Docente"; // Por defecto es Docente, puede ser Admin
 
         [Display(Name = "Foto de Perfil")]
-        public string? FotoPerfil { get; set; }
+        public string FotoPerfil { get; set; }
 
         [Display(Name = "Teléfono")]
-        public string? Telefono { get; set; }
+        public string Telefono { get; set; }
 
         [Display(Name = "Departamento")]
-        public string? Departamento { get; set; }
+        public string Departamento { get; set; }
 
         [Display(Name = "Fecha de Nacimiento")]
         [DataType(DataType.Date)]
         public DateTime? FechaNacimiento { get; set; }
 
         [Display(Name = "Dirección")]
-        public string? Direccion { get; set; }
+        public string Direccion { get; set; }
 
         [Display(Name = "Cédula")]
-        public string? Cedula { get; set; }
+        public string Cedula { get; set; }
 
         [Display(Name = "Puesto")]
-        public string? Puesto { get; set; }
+        public string Puesto { get; set; }
 
         [Display(Name = "Fecha de Registro")]
         public DateTime FechaRegistro { get; set; } = DateTime.Now;
@@ -63,4 +63,3 @@ namespace SistemaPermisos.Models
         public virtual ICollection<ReporteDano> ReportesDanos { get; set; }
     }
 }
-

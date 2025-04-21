@@ -1,0 +1,106 @@
+@model SistemaPermisos.ViewModels.ManagePermissionsViewModel
+
+@{
+    ViewData["Title"] = "Gestionar Permisos";
+}
+
+<div class="container">
+    <div class="card mb-4">
+        <div class="card-header">
+            <h1><i class="fas fa-key"></i> @ViewData["Title"] - @Model.Nombre</h1>
+        </div>
+        <div class="card-body">
+            <form asp-action="ManagePermissions">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                <input type="hidden" asp-for="UsuarioId" />
+                <input type="hidden" asp-for="Nombre" />
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card mb-3">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">Permisos de Usuarios</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-check mb-2">
+                                    <input type="checkbox" class="form-check-input" id="usuarios.ver" name="Permisos" value="usuarios.ver" checked="@Model.Permisos.Contains("usuarios.ver")" />
+                                    <label class="form-check-label" for="usuarios.ver">Ver usuarios</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input type="checkbox" class="form-check-input" id="usuarios.crear" name="Permisos" value="usuarios.crear" checked="@Model.Permisos.Contains("usuarios.crear")" />
+                                    <label class="form-check-label" for="usuarios.crear">Crear usuarios</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input type="checkbox" class="form-check-input" id="usuarios.editar" name="Permisos" value="usuarios.editar" checked="@Model.Permisos.Contains("usuarios.editar")" />
+                                    <label class="form-check-label" for="usuarios.editar">Editar usuarios</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input type="checkbox" class="form-check-input" id="usuarios.eliminar" name="Permisos" value="usuarios.eliminar" checked="@Model.Permisos.Contains("usuarios.eliminar")" />
+                                    <label class="form-check-label" for="usuarios.eliminar">Eliminar usuarios</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card mb-3">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">Permisos de Aprobación</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-check mb-2">
+                                    <input type="checkbox" class="form-check-input" id="permisos.aprobar" name="Permisos" value="permisos.aprobar" checked="@Model.Permisos.Contains("permisos.aprobar")" />
+                                    <label class="form-check-label" for="permisos.aprobar">Aprobar permisos</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input type="checkbox" class="form-check-input" id="omisiones.aprobar" name="Permisos" value="omisiones.aprobar" checked="@Model.Permisos.Contains("omisiones.aprobar")" />
+                                    <label class="form-check-label" for="omisiones.aprobar">Aprobar omisiones</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input type="checkbox" class="form-check-input" id="reportes.resolver" name="Permisos" value="reportes.resolver" checked="@Model.Permisos.Contains("reportes.resolver")" />
+                                    <label class="form-check-label" for="reportes.resolver">Resolver reportes</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card mb-3">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">Permisos de Sistema</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-check mb-2">
+                                    <input type="checkbox" class="form-check-input" id="auditoria.ver" name="Permisos" value="auditoria.ver" checked="@Model.Permisos.Contains("auditoria.ver")" />
+                                    <label class="form-check-label" for="auditoria.ver">Ver auditoría</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input type="checkbox" class="form-check-input" id="exportar.excel" name="Permisos" value="exportar.excel" checked="@Model.Permisos.Contains("exportar.excel")" />
+                                    <label class="form-check-label" for="exportar.excel">Exportar a Excel</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input type="checkbox" class="form-check-input" id="exportar.pdf" name="Permisos" value="exportar.pdf" checked="@Model.Permisos.Contains("exportar.pdf")" />
+                                    <label class="form-check-label" for="exportar.pdf">Exportar a PDF</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group mt-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Guardar Cambios
+                    </button>
+                    <a asp-action="Details" asp-route-id="@Model.UsuarioId" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Volver a Detalles
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}
