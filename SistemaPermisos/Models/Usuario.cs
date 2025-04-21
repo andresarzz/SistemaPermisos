@@ -53,6 +53,10 @@ namespace SistemaPermisos.Models
         [Display(Name = "Última Actualización")]
         public DateTime UltimaActualizacion { get; set; } = DateTime.Now;
 
+        // Agregar esta propiedad al modelo Usuario
+        [Display(Name = "Estado")]
+        public bool Activo { get; set; } = true;
+
         // Relaciones
         public virtual ICollection<Permiso> Permisos { get; set; }
         public virtual ICollection<OmisionMarca> OmisionesMarca { get; set; }

@@ -1,4 +1,4 @@
-﻿@model IEnumerable<SistemaPermisos.Models.Usuario>
+﻿@model PaginatedList<SistemaPermisos.Models.Usuario>
 
 @{
     ViewData["Title"] = "Gestión de Usuarios";
@@ -28,18 +28,94 @@
         </div>
     }
 
+    <div class="card mb-4">
+        <div class="card-body">
+            <form asp-action="Index" method="get" class="row g-3">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" name="SearchString" value="@ViewData["CurrentFilter"]" class="form-control" placeholder="Buscar por nombre, correo o cédula" />
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select name="RoleFilter" class="form-select">
+                        <option value="">Todos los roles</option>
+                        <option value="Admin" selected="@(ViewData["CurrentRoleFilter"]?.ToString() == "Admin")">Administrador</option>
+                        <option value="Docente" selected="@(ViewData["CurrentRoleFilter"]?.ToString() == "Docente")">Docente</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-filter"></i> Filtrar
+                    </button>
+                    <a asp-action="Index" class="btn btn-secondary">
+                        <i class="fas fa-undo"></i> Limpiar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="card">
         <div class="card-body">
             <div class="table-responsive">
                 <table class="table table-striped table-hover">
                     <thead class="table-light">
                         <tr>
-                            <th>Nombre</th>
+                            <th>
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["NameSortParm"]" asp-route-currentFilter="@ViewData["CurrentFilter"]" asp-route-roleFilter="@ViewData["CurrentRoleFilter"]">
+                                    Nombre
+                                    @if (ViewData["CurrentSort"]?.ToString() == "")
+                                    {
+                                        <i class="fas fa-sort-up"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "name_desc")
+                                    {
+                                        <i class="fas fa-sort-down"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="fas fa-sort"></i>
+                                    }
+                                </a>
+                            </th>
                             <th>Correo</th>
-                            <th>Rol</th>
+                            <th>
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["RoleSortParm"]" asp-route-currentFilter="@ViewData["CurrentFilter"]" asp-route-roleFilter="@ViewData["CurrentRoleFilter"]">
+                                    Rol
+                                    @if (ViewData["CurrentSort"]?.ToString() == "Role")
+                                    {
+                                        <i class="fas fa-sort-up"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "role_desc")
+                                    {
+                                        <i class="fas fa-sort-down"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="fas fa-sort"></i>
+                                    }
+                                </a>
+                            </th>
                             <th>Cédula</th>
                             <th>Puesto</th>
-                            <th>Fecha Registro</th>
+                            <th>
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["DateSortParm"]" asp-route-currentFilter="@ViewData["CurrentFilter"]" asp-route-roleFilter="@ViewData["CurrentRoleFilter"]">
+                                    Fecha Registro
+                                    @if (ViewData["CurrentSort"]?.ToString() == "Date")
+                                    {
+                                        <i class="fas fa-sort-up"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "date_desc")
+                                    {
+                                        <i class="fas fa-sort-down"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="fas fa-sort"></i>
+                                    }
+                                </a>
+                            </th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
@@ -68,6 +144,9 @@
                                         <a asp-action="ChangeRole" asp-route-id="@item.Id" class="btn btn-sm btn-warning" title="Cambiar Rol">
                                             <i class="fas fa-user-tag"></i>
                                         </a>
+                                        <a asp-action="ToggleStatus" asp-route-id="@item.Id" class="btn btn-sm @(item.Activo ? "btn-secondary" : "btn-success")" title="@(item.Activo ? "Bloquear" : "Activar")">
+                                            <i class="fas @(item.Activo ? "fa-lock" : "fa-unlock")"></i>
+                                        </a>
                                         <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-danger" title="Eliminar">
                                             <i class="fas fa-trash"></i>
                                         </a>
@@ -82,10 +161,39 @@
             @if (!Model.Any())
             {
                 <div class="alert alert-info mt-3">
-                    <i class="fas fa-info-circle"></i> No hay usuarios registrados.
+                    <i class="fas fa-info-circle"></i> No hay usuarios registrados que coincidan con los criterios de búsqueda.
                 </div>
             }
+
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <div>
+                    Mostrando página @Model.PageIndex de @Model.TotalPages
+                </div>
+                <div>
+                    <nav aria-label="Navegación de páginas">
+                        <ul class="pagination">
+                            <li class="page-item @(!Model.HasPreviousPage ? "disabled" : "")">
+                                <a class="page-link" asp-action="Index"
+                                   asp-route-sortOrder="@ViewData["CurrentSort"]"
+                                   asp-route-pageNumber="@(Model.PageIndex - 1)"
+                                   asp-route-currentFilter="@ViewData["CurrentFilter"]"
+                                   asp-route-roleFilter="@ViewData["CurrentRoleFilter"]">
+                                    Anterior
+                                </a>
+                            </li>
+                            <li class="page-item @(!Model.HasNextPage ? "disabled" : "")">
+                                <a class="page-link" asp-action="Index"
+                                   asp-route-sortOrder="@ViewData["CurrentSort"]"
+                                   asp-route-pageNumber="@(Model.PageIndex + 1)"
+                                   asp-route-currentFilter="@ViewData["CurrentFilter"]"
+                                   asp-route-roleFilter="@ViewData["CurrentRoleFilter"]">
+                                    Siguiente
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
         </div>
     </div>
 </div>
-

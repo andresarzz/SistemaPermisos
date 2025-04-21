@@ -24,6 +24,7 @@ namespace SistemaPermisos.Controllers
         }
 
         // POST: /Account/Login
+        // Modificar el método Login para verificar si el usuario está activo
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult Login(LoginViewModel model)
@@ -34,6 +35,13 @@ namespace SistemaPermisos.Controllers
 
                 if (usuario != null && BCrypt.Net.BCrypt.Verify(model.Password, usuario.Password))
                 {
+                    // Verificar si el usuario está activo
+                    if (!usuario.Activo)
+                    {
+                        ModelState.AddModelError("", "Esta cuenta ha sido desactivada. Contacte al administrador.");
+                        return View(model);
+                    }
+
                     // Guardar información del usuario en la sesión
                     HttpContext.Session.SetInt32("UsuarioId", usuario.Id);
                     HttpContext.Session.SetString("UsuarioNombre", usuario.Nombre);
@@ -47,6 +55,8 @@ namespace SistemaPermisos.Controllers
 
             return View(model);
         }
+
+
 
         // GET: /Account/Register
         public IActionResult Register()

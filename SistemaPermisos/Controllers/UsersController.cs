@@ -22,7 +22,8 @@ namespace SistemaPermisos.Controllers
         }
 
         // GET: Users
-        public async Task<IActionResult> Index()
+        // Modificar el método Index para incluir búsqueda y filtrado
+        public async Task<IActionResult> Index(string searchString, string currentFilter, string sortOrder, string roleFilter, int? pageNumber)
         {
             // Verificar que sea administrador
             var rol = HttpContext.Session.GetString("UsuarioRol");
@@ -31,8 +32,65 @@ namespace SistemaPermisos.Controllers
                 return RedirectToAction("Index", "Home");
             }
 
-            var usuarios = await _context.Usuarios.ToListAsync();
-            return View(usuarios);
+            ViewData["CurrentSort"] = sortOrder;
+            ViewData["NameSortParm"] = String.IsNullOrEmpty(sortOrder) ? "name_desc" : "";
+            ViewData["RoleSortParm"] = sortOrder == "Role" ? "role_desc" : "Role";
+            ViewData["DateSortParm"] = sortOrder == "Date" ? "date_desc" : "Date";
+            ViewData["CurrentRoleFilter"] = roleFilter;
+
+            if (searchString != null)
+            {
+                pageNumber = 1;
+            }
+            else
+            {
+                searchString = currentFilter;
+            }
+
+            ViewData["CurrentFilter"] = searchString;
+
+            var usuarios = from u in _context.Usuarios
+                           select u;
+
+            // Aplicar filtro de búsqueda
+            if (!String.IsNullOrEmpty(searchString))
+            {
+                usuarios = usuarios.Where(u => u.Nombre.Contains(searchString) ||
+                                              u.Correo.Contains(searchString) ||
+                                              (u.Cedula != null && u.Cedula.Contains(searchString)));
+            }
+
+            // Aplicar filtro de rol
+            if (!String.IsNullOrEmpty(roleFilter))
+            {
+                usuarios = usuarios.Where(u => u.Rol == roleFilter);
+            }
+
+            // Aplicar ordenamiento
+            switch (sortOrder)
+            {
+                case "name_desc":
+                    usuarios = usuarios.OrderByDescending(u => u.Nombre);
+                    break;
+                case "Role":
+                    usuarios = usuarios.OrderBy(u => u.Rol);
+                    break;
+                case "role_desc":
+                    usuarios = usuarios.OrderByDescending(u => u.Rol);
+                    break;
+                case "Date":
+                    usuarios = usuarios.OrderBy(u => u.FechaRegistro);
+                    break;
+                case "date_desc":
+                    usuarios = usuarios.OrderByDescending(u => u.FechaRegistro);
+                    break;
+                default:
+                    usuarios = usuarios.OrderBy(u => u.Nombre);
+                    break;
+            }
+
+            int pageSize = 10;
+            return View(await PaginatedList<Usuario>.CreateAsync(usuarios.AsNoTracking(), pageNumber ?? 1, pageSize));
         }
 
         // GET: Users/Details/5
@@ -387,6 +445,49 @@ namespace SistemaPermisos.Controllers
             }
 
             return View(model);
+        }
+
+        // Agregar este método para implementar el bloqueo/desbloqueo de usuarios
+        public async Task<IActionResult> ToggleStatus(int? id)
+        {
+            // Verificar que sea administrador
+            var rol = HttpContext.Session.GetString("UsuarioRol");
+            if (rol != "Admin")
+            {
+                return RedirectToAction("Index", "Home");
+            }
+
+            if (id == null)
+            {
+                return NotFound();
+            }
+
+            // No permitir bloquear al usuario actual
+            var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
+            if (usuarioId == id)
+            {
+                TempData["ErrorMessage"] = "No puedes bloquear tu propia cuenta.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var usuario = await _context.Usuarios.FindAsync(id);
+            if (usuario == null)
+            {
+                return NotFound();
+            }
+
+            // Cambiar el estado del usuario (activo/inactivo)
+            usuario.Activo = !usuario.Activo;
+            usuario.UltimaActualizacion = DateTime.Now;
+
+            _context.Update(usuario);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = usuario.Activo
+                ? "Usuario activado correctamente."
+                : "Usuario bloqueado correctamente.";
+
+            return RedirectToAction(nameof(Index));
         }
 
         private bool UsuarioExists(int id)
