@@ -450,6 +450,12 @@ namespace SistemaPermisos.Controllers
 
             if (ModelState.IsValid)
             {
+                // Asegurarse de que la colección de permisos no sea nula
+                if (model.Permisos == null)
+                {
+                    model.Permisos = new List<string>();
+                }
+
                 // Obtener permisos actuales
                 var permisosActuales = (await _userService.GetUserPermissionsAsync(model.UsuarioId)).ToList();
 
@@ -709,4 +715,3 @@ namespace SistemaPermisos.Controllers
         }
     }
 }
-

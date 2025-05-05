@@ -58,8 +58,8 @@ namespace SistemaPermisos.Models
         public bool Activo { get; set; } = true;
 
         // Relaciones
-        public virtual ICollection<Permiso> Permisos { get; set; }
-        public virtual ICollection<OmisionMarca> OmisionesMarca { get; set; }
-        public virtual ICollection<ReporteDano> ReportesDanos { get; set; }
+        public virtual ICollection<Permiso> Permisos { get; set; } = new List<Permiso>();
+        public virtual ICollection<OmisionMarca> OmisionesMarca { get; set; } = new List<OmisionMarca>();
+        public virtual ICollection<ReporteDano> ReportesDanos { get; set; } = new List<ReporteDano>();
     }
 }

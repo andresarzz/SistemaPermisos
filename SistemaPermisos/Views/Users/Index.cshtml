@@ -63,7 +63,7 @@
                     <thead class="table-light">
                         <tr>
                             <th>
-                                <a asp-action="Index" asp-route-sortOrder="@ViewData["NameSortParm"]" asp-route-currentFilter="@ViewData["CurrentFilter"]" asp-route-roleFilter="@ViewData["CurrentRoleFilter"]">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["NameSortParm"]" asp-route-currentFilter="@ViewData["CurrentFilter"]" asp-route-roleFilter="@ViewData["RoleFilter"]">
                                     Nombre
                                     @if (ViewData["CurrentSort"]?.ToString() == "")
                                     {
@@ -81,7 +81,7 @@
                             </th>
                             <th>Correo</th>
                             <th>
-                                <a asp-action="Index" asp-route-sortOrder="@ViewData["RoleSortParm"]" asp-route-currentFilter="@ViewData["CurrentFilter"]" asp-route-roleFilter="@ViewData["CurrentRoleFilter"]">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["RoleSortParm"]" asp-route-currentFilter="@ViewData["CurrentFilter"]" asp-route-roleFilter="@ViewData["RoleFilter"]">
                                     Rol
                                     @if (ViewData["CurrentSort"]?.ToString() == "Role")
                                     {
@@ -100,7 +100,7 @@
                             <th>Cédula</th>
                             <th>Puesto</th>
                             <th>
-                                <a asp-action="Index" asp-route-sortOrder="@ViewData["DateSortParm"]" asp-route-currentFilter="@ViewData["CurrentFilter"]" asp-route-roleFilter="@ViewData["CurrentRoleFilter"]">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["DateSortParm"]" asp-route-currentFilter="@ViewData["CurrentFilter"]" asp-route-roleFilter="@ViewData["RoleFilter"]">
                                     Fecha Registro
                                     @if (ViewData["CurrentSort"]?.ToString() == "Date")
                                     {
@@ -177,7 +177,7 @@
                                    asp-route-sortOrder="@ViewData["CurrentSort"]"
                                    asp-route-pageNumber="@(Model.PageIndex - 1)"
                                    asp-route-currentFilter="@ViewData["CurrentFilter"]"
-                                   asp-route-roleFilter="@ViewData["CurrentRoleFilter"]">
+                                   asp-route-roleFilter="@ViewData["RoleFilter"]">
                                     Anterior
                                 </a>
                             </li>
@@ -186,7 +186,7 @@
                                    asp-route-sortOrder="@ViewData["CurrentSort"]"
                                    asp-route-pageNumber="@(Model.PageIndex + 1)"
                                    asp-route-currentFilter="@ViewData["CurrentFilter"]"
-                                   asp-route-roleFilter="@ViewData["CurrentRoleFilter"]">
+                                   asp-route-roleFilter="@ViewData["RoleFilter"]">
                                     Siguiente
                                 </a>
                             </li>

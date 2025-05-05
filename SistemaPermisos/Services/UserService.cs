@@ -84,7 +84,7 @@ namespace SistemaPermisos.Services
             }
 
             // Verificar si el correo ya existe en otro usuario
-            if (usuario.Correo != model.Correo && 
+            if (usuario.Correo != model.Correo &&
                 await _unitOfWork.Usuarios.ExistsAsync(u => u.Correo == model.Correo))
             {
                 return false;
@@ -162,7 +162,7 @@ namespace SistemaPermisos.Services
             await _unitOfWork.CompleteAsync();
 
             // Registrar en auditoría
-            await _auditService.LogActivityAsync(null, "Cambiar Rol", "Usuarios", usuario.Id, 
+            await _auditService.LogActivityAsync(null, "Cambiar Rol", "Usuarios", usuario.Id,
                 $"Rol anterior: {rolAnterior}", $"Nuevo rol: {usuario.Rol}");
 
             return true;
@@ -184,7 +184,7 @@ namespace SistemaPermisos.Services
 
             // Registrar en auditoría
             string accion = usuario.Activo ? "Activar" : "Desactivar";
-            await _auditService.LogActivityAsync(null, accion, "Usuarios", usuario.Id, 
+            await _auditService.LogActivityAsync(null, accion, "Usuarios", usuario.Id,
                 $"Estado anterior: {!usuario.Activo}", $"Nuevo estado: {usuario.Activo}");
 
             return true;
@@ -229,8 +229,10 @@ namespace SistemaPermisos.Services
 
         public async Task<IEnumerable<string>> GetUserPermissionsAsync(int userId)
         {
-            var permissions = await _unitOfWork.UserPermissions.FindAsync(p => p.UsuarioId == userId);
-            return permissions.Select(p => p.Permiso);
+            var userPermissions = await _unitOfWork.UserPermissions
+                .GetAllAsync(p => p.UsuarioId == userId);
+
+            return userPermissions?.Select(p => p.PermissionName) ?? Enumerable.Empty<string>();
         }
 
         public async Task<bool> AddPermissionAsync(int userId, string permission)
@@ -257,7 +259,7 @@ namespace SistemaPermisos.Services
             await _unitOfWork.CompleteAsync();
 
             // Registrar en auditoría
-            await _auditService.LogActivityAsync(null, "Agregar Permiso", "UserPermissions", userId, 
+            await _auditService.LogActivityAsync(null, "Agregar Permiso", "UserPermissions", userId,
                 null, $"Permiso agregado: {permission}");
 
             return true;
@@ -267,7 +269,7 @@ namespace SistemaPermisos.Services
         {
             var permissions = await _unitOfWork.UserPermissions.FindAsync(p => p.UsuarioId == userId && p.Permiso == permission);
             var userPermission = permissions.FirstOrDefault();
-            
+
             if (userPermission == null)
             {
                 return false;
@@ -277,7 +279,7 @@ namespace SistemaPermisos.Services
             await _unitOfWork.CompleteAsync();
 
             // Registrar en auditoría
-            await _auditService.LogActivityAsync(null, "Eliminar Permiso", "UserPermissions", userId, 
+            await _auditService.LogActivityAsync(null, "Eliminar Permiso", "UserPermissions", userId,
                 $"Permiso eliminado: {permission}", null);
 
             return true;
@@ -293,7 +295,7 @@ namespace SistemaPermisos.Services
 
             // Generar token único
             string token = GenerateResetToken();
-            
+
             // Guardar token en la base de datos
             var passwordReset = new PasswordReset
             {
@@ -311,7 +313,7 @@ namespace SistemaPermisos.Services
             await _emailService.SendPasswordResetEmailAsync(usuario.Correo, usuario.Nombre, resetLink);
 
             // Registrar en auditoría
-            await _auditService.LogActivityAsync(null, "Solicitar Restablecimiento", "PasswordResets", usuario.Id, 
+            await _auditService.LogActivityAsync(null, "Solicitar Restablecimiento", "PasswordResets", usuario.Id,
                 null, $"Token generado para {usuario.Correo}");
 
             return true;
@@ -320,11 +322,11 @@ namespace SistemaPermisos.Services
         public async Task<bool> CompletePasswordResetAsync(string token, string newPassword)
         {
             // Buscar el token en la base de datos
-            var passwordResets = await _unitOfWork.PasswordResets.FindAsync(pr => 
-                pr.Token == token && 
-                pr.FechaExpiracion > DateTime.Now && 
+            var passwordResets = await _unitOfWork.PasswordResets.FindAsync(pr =>
+                pr.Token == token &&
+                pr.FechaExpiracion > DateTime.Now &&
                 !pr.Utilizado);
-            
+
             var passwordReset = passwordResets.FirstOrDefault();
             if (passwordReset == null)
             {
@@ -346,11 +348,11 @@ namespace SistemaPermisos.Services
             // Marcar el token como utilizado
             passwordReset.Utilizado = true;
             await _unitOfWork.PasswordResets.UpdateAsync(passwordReset);
-            
+
             await _unitOfWork.CompleteAsync();
 
             // Registrar en auditoría
-            await _auditService.LogActivityAsync(usuario.Id, "Restablecer Contraseña", "Usuarios", usuario.Id, 
+            await _auditService.LogActivityAsync(usuario.Id, "Restablecer Contraseña", "Usuarios", usuario.Id,
                 null, "Contraseña restablecida mediante token");
 
             return true;
@@ -366,7 +368,7 @@ namespace SistemaPermisos.Services
 
             // Verificar si ya tiene 2FA
             var twoFactorAuth = (await _unitOfWork.TwoFactorAuth.FindAsync(t => t.UsuarioId == userId)).FirstOrDefault();
-            
+
             if (twoFactorAuth == null)
             {
                 // Crear nuevo registro de 2FA
@@ -391,7 +393,7 @@ namespace SistemaPermisos.Services
             await _unitOfWork.CompleteAsync();
 
             // Registrar en auditoría
-            await _auditService.LogActivityAsync(userId, "Habilitar 2FA", "TwoFactorAuth", userId, 
+            await _auditService.LogActivityAsync(userId, "Habilitar 2FA", "TwoFactorAuth", userId,
                 null, "Autenticación de dos factores habilitada");
 
             return true;
@@ -407,12 +409,12 @@ namespace SistemaPermisos.Services
 
             twoFactorAuth.Habilitado = false;
             twoFactorAuth.FechaActualizacion = DateTime.Now;
-            
+
             await _unitOfWork.TwoFactorAuth.UpdateAsync(twoFactorAuth);
             await _unitOfWork.CompleteAsync();
 
             // Registrar en auditoría
-            await _auditService.LogActivityAsync(userId, "Deshabilitar 2FA", "TwoFactorAuth", userId, 
+            await _auditService.LogActivityAsync(userId, "Deshabilitar 2FA", "TwoFactorAuth", userId,
                 null, "Autenticación de dos factores deshabilitada");
 
             return true;
@@ -428,11 +430,11 @@ namespace SistemaPermisos.Services
 
             // Generar código de 6 dígitos
             string code = GenerateRandomCode();
-            
+
             // Guardar código y establecer expiración (5 minutos)
             twoFactorAuth.UltimoCodigo = code;
             twoFactorAuth.FechaExpiracionCodigo = DateTime.Now.AddMinutes(5);
-            
+
             await _unitOfWork.TwoFactorAuth.UpdateAsync(twoFactorAuth);
             await _unitOfWork.CompleteAsync();
 
@@ -448,12 +450,12 @@ namespace SistemaPermisos.Services
 
         public async Task<bool> Verify2FACodeAsync(int userId, string code)
         {
-            var twoFactorAuth = (await _unitOfWork.TwoFactorAuth.FindAsync(t => 
-                t.UsuarioId == userId && 
-                t.Habilitado && 
-                t.UltimoCodigo == code && 
+            var twoFactorAuth = (await _unitOfWork.TwoFactorAuth.FindAsync(t =>
+                t.UsuarioId == userId &&
+                t.Habilitado &&
+                t.UltimoCodigo == code &&
                 t.FechaExpiracionCodigo > DateTime.Now)).FirstOrDefault();
-            
+
             if (twoFactorAuth == null)
             {
                 return false;
@@ -462,12 +464,12 @@ namespace SistemaPermisos.Services
             // Invalidar el código después de usarlo
             twoFactorAuth.UltimoCodigo = null;
             twoFactorAuth.FechaExpiracionCodigo = null;
-            
+
             await _unitOfWork.TwoFactorAuth.UpdateAsync(twoFactorAuth);
             await _unitOfWork.CompleteAsync();
 
             // Registrar en auditoría
-            await _auditService.LogActivityAsync(userId, "Verificar 2FA", "TwoFactorAuth", userId, 
+            await _auditService.LogActivityAsync(userId, "Verificar 2FA", "TwoFactorAuth", userId,
                 null, "Código 2FA verificado correctamente");
 
             return true;
@@ -505,4 +507,3 @@ namespace SistemaPermisos.Services
         #endregion
     }
 }
-

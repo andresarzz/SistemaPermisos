@@ -23,19 +23,19 @@
                             </div>
                             <div class="card-body">
                                 <div class="form-check mb-2">
-                                    <input type="checkbox" class="form-check-input" id="usuarios.ver" name="Permisos" value="usuarios.ver" checked="@Model.Permisos.Contains("usuarios.ver")" />
+                                    <input type="checkbox" class="form-check-input" id="usuarios.ver" name="Permisos" value="usuarios.ver" @checked(Model.Permisos.Contains("usuarios.ver")) />
                                     <label class="form-check-label" for="usuarios.ver">Ver usuarios</label>
                                 </div>
                                 <div class="form-check mb-2">
-                                    <input type="checkbox" class="form-check-input" id="usuarios.crear" name="Permisos" value="usuarios.crear" checked="@Model.Permisos.Contains("usuarios.crear")" />
+                                    <input type="checkbox" class="form-check-input" id="usuarios.crear" name="Permisos" value="usuarios.crear" @checked(Model.Permisos.Contains("usuarios.crear")) />
                                     <label class="form-check-label" for="usuarios.crear">Crear usuarios</label>
                                 </div>
                                 <div class="form-check mb-2">
-                                    <input type="checkbox" class="form-check-input" id="usuarios.editar" name="Permisos" value="usuarios.editar" checked="@Model.Permisos.Contains("usuarios.editar")" />
+                                    <input type="checkbox" class="form-check-input" id="usuarios.editar" name="Permisos" value="usuarios.editar" @checked(Model.Permisos.Contains("usuarios.editar")) />
                                     <label class="form-check-label" for="usuarios.editar">Editar usuarios</label>
                                 </div>
                                 <div class="form-check mb-2">
-                                    <input type="checkbox" class="form-check-input" id="usuarios.eliminar" name="Permisos" value="usuarios.eliminar" checked="@Model.Permisos.Contains("usuarios.eliminar")" />
+                                    <input type="checkbox" class="form-check-input" id="usuarios.eliminar" name="Permisos" value="usuarios.eliminar" @checked(Model.Permisos.Contains("usuarios.eliminar")) />
                                     <label class="form-check-label" for="usuarios.eliminar">Eliminar usuarios</label>
                                 </div>
                             </div>
@@ -48,15 +48,15 @@
                             </div>
                             <div class="card-body">
                                 <div class="form-check mb-2">
-                                    <input type="checkbox" class="form-check-input" id="permisos.aprobar" name="Permisos" value="permisos.aprobar" checked="@Model.Permisos.Contains("permisos.aprobar")" />
+                                    <input type="checkbox" class="form-check-input" id="permisos.aprobar" name="Permisos" value="permisos.aprobar" @checked(Model.Permisos.Contains("permisos.aprobar")) />
                                     <label class="form-check-label" for="permisos.aprobar">Aprobar permisos</label>
                                 </div>
                                 <div class="form-check mb-2">
-                                    <input type="checkbox" class="form-check-input" id="omisiones.aprobar" name="Permisos" value="omisiones.aprobar" checked="@Model.Permisos.Contains("omisiones.aprobar")" />
+                                    <input type="checkbox" class="form-check-input" id="omisiones.aprobar" name="Permisos" value="omisiones.aprobar" @checked(Model.Permisos.Contains("omisiones.aprobar")) />
                                     <label class="form-check-label" for="omisiones.aprobar">Aprobar omisiones</label>
                                 </div>
                                 <div class="form-check mb-2">
-                                    <input type="checkbox" class="form-check-input" id="reportes.resolver" name="Permisos" value="reportes.resolver" checked="@Model.Permisos.Contains("reportes.resolver")" />
+                                    <input type="checkbox" class="form-check-input" id="reportes.resolver" name="Permisos" value="reportes.resolver" @checked(Model.Permisos.Contains("reportes.resolver")) />
                                     <label class="form-check-label" for="reportes.resolver">Resolver reportes</label>
                                 </div>
                             </div>
@@ -72,15 +72,15 @@
                             </div>
                             <div class="card-body">
                                 <div class="form-check mb-2">
-                                    <input type="checkbox" class="form-check-input" id="auditoria.ver" name="Permisos" value="auditoria.ver" checked="@Model.Permisos.Contains("auditoria.ver")" />
+                                    <input type="checkbox" class="form-check-input" id="auditoria.ver" name="Permisos" value="auditoria.ver" @checked(Model.Permisos.Contains("auditoria.ver")) />
                                     <label class="form-check-label" for="auditoria.ver">Ver auditoría</label>
                                 </div>
                                 <div class="form-check mb-2">
-                                    <input type="checkbox" class="form-check-input" id="exportar.excel" name="Permisos" value="exportar.excel" checked="@Model.Permisos.Contains("exportar.excel")" />
+                                    <input type="checkbox" class="form-check-input" id="exportar.excel" name="Permisos" value="exportar.excel" @checked(Model.Permisos.Contains("exportar.excel")) />
                                     <label class="form-check-label" for="exportar.excel">Exportar a Excel</label>
                                 </div>
                                 <div class="form-check mb-2">
-                                    <input type="checkbox" class="form-check-input" id="exportar.pdf" name="Permisos" value="exportar.pdf" checked="@Model.Permisos.Contains("exportar.pdf")" />
+                                    <input type="checkbox" class="form-check-input" id="exportar.pdf" name="Permisos" value="exportar.pdf" @checked(Model.Permisos.Contains("exportar.pdf")) />
                                     <label class="form-check-label" for="exportar.pdf">Exportar a PDF</label>
                                 </div>
                             </div>
@@ -102,5 +102,7 @@
 </div>
 
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
 }
