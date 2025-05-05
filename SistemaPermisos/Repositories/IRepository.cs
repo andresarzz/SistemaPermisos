@@ -19,4 +19,3 @@ namespace SistemaPermisos.Repositories
         IQueryable<T> Query();
     }
 }
-

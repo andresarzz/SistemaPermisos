@@ -5,9 +5,9 @@ using SistemaPermisos.Services;
 using SistemaPermisos.ViewModels;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Hosting;
 
 namespace SistemaPermisos.Controllers
 {
@@ -99,7 +99,7 @@ namespace SistemaPermisos.Controllers
             await _auditService.LogActivityAsync(
                 HttpContext.Session.GetInt32("UsuarioId"),
                 "Consultar",
-                "Usuarios",
+                "Usuario",
                 null,
                 null,
                 $"Filtros: {searchString}, {roleFilter}, {sortOrder}"

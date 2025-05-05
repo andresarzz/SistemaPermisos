@@ -7,7 +7,7 @@ namespace SistemaPermisos.Models
     {
         public int Id { get; set; }
 
-        [Required]
+        [Display(Name = "Usuario")]
         public int? UsuarioId { get; set; }
 
         [Required]
@@ -15,28 +15,27 @@ namespace SistemaPermisos.Models
         public string Accion { get; set; }
 
         [Required]
-        [Display(Name = "Tabla")]
-        public string Tabla { get; set; }
+        [Display(Name = "Entidad")]
+        public string Entidad { get; set; }
 
-        [Display(Name = "Registro ID")]
-        public int? RegistroId { get; set; }
+        [Display(Name = "ID de Entidad")]
+        public int? EntidadId { get; set; }
 
-        [Display(Name = "Datos Antiguos")]
-        public string DatosAntiguos { get; set; }
-
-        [Display(Name = "Datos Nuevos")]
-        public string DatosNuevos { get; set; }
+        [Display(Name = "Detalles")]
+        public string Detalles { get; set; }
 
         [Required]
         [Display(Name = "Dirección IP")]
         public string DireccionIP { get; set; }
 
+        [Display(Name = "User Agent")]
+        public string UserAgent { get; set; }
+
         [Required]
-        [Display(Name = "Fecha")]
-        public DateTime Fecha { get; set; } = DateTime.Now;
+        [Display(Name = "Fecha y Hora")]
+        public DateTime FechaHora { get; set; } = DateTime.Now;
 
         // Relaciones
         public virtual Usuario Usuario { get; set; }
     }
 }
-

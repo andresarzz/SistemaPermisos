@@ -1,7 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SistemaPermisos.Models;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace SistemaPermisos.Data
 {
@@ -25,95 +23,59 @@ namespace SistemaPermisos.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            // Configuraciones adicionales de relaciones
+            // Configuración de Usuario
+            modelBuilder.Entity<Usuario>()
+                .HasIndex(u => u.Correo)
+                .IsUnique();
+
+            // Configuración de Permiso
             modelBuilder.Entity<Permiso>()
                 .HasOne(p => p.Usuario)
                 .WithMany(u => u.Permisos)
                 .HasForeignKey(p => p.UsuarioId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
+            // Configuración de OmisionMarca
             modelBuilder.Entity<OmisionMarca>()
                 .HasOne(o => o.Usuario)
                 .WithMany(u => u.OmisionesMarca)
                 .HasForeignKey(o => o.UsuarioId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
+            // Configuración de ReporteDano
             modelBuilder.Entity<ReporteDano>()
                 .HasOne(r => r.Usuario)
                 .WithMany(u => u.ReportesDanos)
                 .HasForeignKey(r => r.UsuarioId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
+            // Configuración de AuditLog
             modelBuilder.Entity<AuditLog>()
                 .HasOne(a => a.Usuario)
                 .WithMany()
                 .HasForeignKey(a => a.UsuarioId)
                 .OnDelete(DeleteBehavior.SetNull);
 
+            // Configuración de UserPermission
             modelBuilder.Entity<UserPermission>()
-                .HasOne(up => up.Usuario)
-                .WithMany()
-                .HasForeignKey(up => up.UsuarioId)
+                .HasOne(p => p.Usuario)
+                .WithMany(u => u.Permisos)
+                .HasForeignKey(p => p.UsuarioId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            // Configuración de PasswordReset
             modelBuilder.Entity<PasswordReset>()
-                .HasOne(pr => pr.Usuario)
+                .HasOne(p => p.Usuario)
                 .WithMany()
-                .HasForeignKey(pr => pr.UsuarioId)
+                .HasForeignKey(p => p.UsuarioId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            // Configuración de TwoFactorAuth
             modelBuilder.Entity<TwoFactorAuth>()
-                .HasOne(tfa => tfa.Usuario)
-                .WithMany()
-                .HasForeignKey(tfa => tfa.UsuarioId)
+                .HasOne(t => t.Usuario)
+                .WithOne()
+                .HasForeignKey<TwoFactorAuth>(t => t.UsuarioId)
                 .OnDelete(DeleteBehavior.Cascade);
-
-            // Datos iniciales (opcional)
-            modelBuilder.Entity<Usuario>().HasData(
-                new Usuario
-                {
-                    Id = 1,
-                    Nombre = "Administrador",
-                    Correo = "admin@escuela.edu",
-                    Password = BCrypt.Net.BCrypt.HashPassword("Admin123!"),
-                    Rol = "Admin",
-                    Activo = true
-                },
-                new Usuario
-                {
-                    Id = 2,
-                    Nombre = "Docente Demo",
-                    Correo = "docente@escuela.edu",
-                    Password = BCrypt.Net.BCrypt.HashPassword("Docente123!"),
-                    Rol = "Docente",
-                    Activo = true
-                }
-            );
-
-            // Permisos predefinidos
-            modelBuilder.Entity<UserPermission>().HasData(
-                new UserPermission { Id = 1, UsuarioId = 1, Permiso = "usuarios.ver" },
-                new UserPermission { Id = 2, UsuarioId = 1, Permiso = "usuarios.crear" },
-                new UserPermission { Id = 3, UsuarioId = 1, Permiso = "usuarios.editar" },
-                new UserPermission { Id = 4, UsuarioId = 1, Permiso = "usuarios.eliminar" },
-                new UserPermission { Id = 5, UsuarioId = 1, Permiso = "permisos.aprobar" },
-                new UserPermission { Id = 6, UsuarioId = 1, Permiso = "omisiones.aprobar" },
-                new UserPermission { Id = 7, UsuarioId = 1, Permiso = "reportes.resolver" },
-                new UserPermission { Id = 8, UsuarioId = 1, Permiso = "auditoria.ver" }
-            );
-        }
-
-        // Sobrescribir SaveChanges para implementar auditoría automática
-        public override int SaveChanges()
-        {
-            return SaveChangesAsync().GetAwaiter().GetResult();
-        }
-
-        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
-        {
-            // La lógica de auditoría se implementará en el servicio de auditoría
-            return await base.SaveChangesAsync(cancellationToken);
         }
     }
 }
-
