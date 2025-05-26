@@ -20,13 +20,13 @@ namespace SistemaPermisos.Services
         public EmailService(IConfiguration configuration)
         {
             _configuration = configuration;
-            _smtpServer = _configuration["Email:SmtpServer"];
-            _smtpPort = int.Parse(_configuration["Email:SmtpPort"]);
-            _smtpUsername = _configuration["Email:SmtpUsername"];
-            _smtpPassword = _configuration["Email:SmtpPassword"];
-            _fromEmail = _configuration["Email:FromEmail"];
-            _fromName = _configuration["Email:FromName"];
-            _enableSsl = bool.Parse(_configuration["Email:EnableSsl"]);
+            _smtpServer = _configuration["EmailSettings:SmtpServer"];
+            _smtpPort = int.Parse(_configuration["EmailSettings:SmtpPort"]);
+            _smtpUsername = _configuration["EmailSettings:SmtpUsername"];
+            _smtpPassword = _configuration["EmailSettings:SmtpPassword"];
+            _fromEmail = _configuration["EmailSettings:FromEmail"];
+            _fromName = _configuration["EmailSettings:FromName"];
+            _enableSsl = bool.Parse(_configuration["EmailSettings:EnableSsl"]);
         }
 
         public async Task<bool> SendEmailAsync(string to, string subject, string body, bool isHtml = true)

@@ -6,99 +6,113 @@ namespace SistemaPermisos.Models
 {
     public class Permiso
     {
+        [Key]
         public int Id { get; set; }
 
-        [Required(ErrorMessage = "El usuario es requerido")]
+        [Required(ErrorMessage = "El usuario es obligatorio")]
         public int UsuarioId { get; set; }
 
         [ForeignKey("UsuarioId")]
-        public virtual Usuario Usuario { get; set; }
+        public virtual Usuario Usuario { get; set; } = null!;
 
-        [Required(ErrorMessage = "La fecha es requerida")]
+        [Required(ErrorMessage = "El tipo de permiso es obligatorio")]
+        [StringLength(100, ErrorMessage = "El tipo de permiso no puede exceder los 100 caracteres")]
+        [Display(Name = "Tipo de Permiso")]
+        public string TipoPermiso { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "La fecha es obligatoria")]
         [DataType(DataType.Date)]
         [Display(Name = "Fecha")]
         public DateTime Fecha { get; set; }
 
-        [Required(ErrorMessage = "El motivo es requerido")]
+        [Required(ErrorMessage = "La fecha de inicio es obligatoria")]
+        [DataType(DataType.Date)]
+        [Display(Name = "Fecha de Inicio")]
+        public DateTime FechaInicio { get; set; }
+
+        [Required(ErrorMessage = "La fecha de fin es obligatoria")]
+        [DataType(DataType.Date)]
+        [Display(Name = "Fecha de Fin")]
+        public DateTime FechaFin { get; set; }
+
+        [Display(Name = "Hora desde")]
+        public TimeSpan? HoraDesde { get; set; }
+
+        [Display(Name = "Hora hasta")]
+        public TimeSpan? HoraHasta { get; set; }
+
+        [Display(Name = "Jornada completa")]
+        public bool JornadaCompleta { get; set; }
+
+        [Display(Name = "Media jornada")]
+        public bool MediaJornada { get; set; }
+
+        [Display(Name = "Cantidad de lecciones")]
+        public int? CantidadLecciones { get; set; }
+
+        [StringLength(20, ErrorMessage = "La cédula no puede exceder los 20 caracteres")]
+        [Display(Name = "Cédula")]
+        public string? Cedula { get; set; }
+
+        [StringLength(100, ErrorMessage = "El puesto no puede exceder los 100 caracteres")]
+        [Display(Name = "Puesto")]
+        public string? Puesto { get; set; }
+
+        [StringLength(50, ErrorMessage = "La condición no puede exceder los 50 caracteres")]
+        [Display(Name = "Condición")]
+        public string? Condicion { get; set; }
+
+        [StringLength(100, ErrorMessage = "El tipo de motivo no puede exceder los 100 caracteres")]
+        [Display(Name = "Tipo de motivo")]
+        public string? TipoMotivo { get; set; }
+
+        [StringLength(100, ErrorMessage = "El tipo de convocatoria no puede exceder los 100 caracteres")]
+        [Display(Name = "Tipo de convocatoria")]
+        public string? TipoConvocatoria { get; set; }
+
+        [Required(ErrorMessage = "El motivo es obligatorio")]
         [StringLength(500, ErrorMessage = "El motivo no puede exceder los 500 caracteres")]
         [Display(Name = "Motivo")]
-        public string Motivo { get; set; }
+        public string Motivo { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "El estado es requerido")]
+        [Required]
         [StringLength(20, ErrorMessage = "El estado no puede exceder los 20 caracteres")]
         [Display(Name = "Estado")]
-        public string Estado { get; set; } = "Pendiente"; // Pendiente, Aprobado, Rechazado
+        public string Estado { get; set; } = "Pendiente";
+
+        [Display(Name = "Hora de salida")]
+        public string? HoraSalida { get; set; }
+
+        [StringLength(255, ErrorMessage = "La ruta del comprobante no puede exceder los 255 caracteres")]
+        [Display(Name = "Ruta del comprobante")]
+        public string? RutaComprobante { get; set; }
+
+        [StringLength(255, ErrorMessage = "La ruta de justificación no puede exceder los 255 caracteres")]
+        [Display(Name = "Ruta de justificación")]
+        public string? RutaJustificacion { get; set; }
 
         [Display(Name = "Justificado")]
         public bool Justificado { get; set; } = false;
 
+        [Required]
+        [DataType(DataType.DateTime)]
         [Display(Name = "Fecha de Solicitud")]
         public DateTime FechaSolicitud { get; set; } = DateTime.Now;
 
-        [StringLength(500)]
+        [StringLength(500, ErrorMessage = "Las observaciones no pueden exceder los 500 caracteres")]
         [Display(Name = "Observaciones")]
-        public string Observaciones { get; set; }
+        public string? Observaciones { get; set; }
 
-        [Display(Name = "Hora Desde")]
-        public TimeSpan? HoraDesde { get; set; }
+        [StringLength(100, ErrorMessage = "La resolución no puede exceder los 100 caracteres")]
+        [Display(Name = "Resolución")]
+        public string? Resolucion { get; set; }
 
-        [Display(Name = "Hora Hasta")]
-        public TimeSpan? HoraHasta { get; set; }
+        [StringLength(500, ErrorMessage = "Las observaciones de resolución no pueden exceder los 500 caracteres")]
+        [Display(Name = "Observaciones de resolución")]
+        public string? ObservacionesResolucion { get; set; }
 
-        [Display(Name = "Jornada Completa")]
-        public bool JornadaCompleta { get; set; }
-
-        [Display(Name = "Media Jornada")]
-        public bool MediaJornada { get; set; }
-
-        [Display(Name = "Cantidad de Lecciones")]
-        public int? CantidadLecciones { get; set; }
-
-        [Display(Name = "Cédula")]
-        public string Cedula { get; set; }
-
-        [Display(Name = "Puesto")]
-        public string Puesto { get; set; }
-
-        [Display(Name = "Condición")]
-        public string Condicion { get; set; }
-
-        [Display(Name = "Tipo de Motivo")]
-        public string TipoMotivo { get; set; }
-
-        [Display(Name = "Tipo de Convocatoria")]
-        public string TipoConvocatoria { get; set; }
-
-        [Display(Name = "Hora de Salida")]
-        public TimeSpan? HoraSalida { get; set; }
-
-        [Display(Name = "Ruta del Comprobante")]
-        public string RutaComprobante { get; set; }
-
-        [Display(Name = "Ruta de Justificación")]
-        public string RutaJustificacion { get; set; }
-
-        // Métodos de extensión
-        public string Resolucion(Permiso permiso)
-        {
-            return permiso.Estado == "Aprobado" ? "Aprobado" : "Rechazado";
-        }
-
-        public string ObservacionesResolucion(Permiso permiso)
-        {
-            return permiso.Observaciones ?? "Sin observaciones";
-        }
-
-        public string TipoRebajo(Permiso permiso)
-        {
-            if (permiso.JornadaCompleta)
-                return "Jornada Completa";
-            else if (permiso.MediaJornada)
-                return "Media Jornada";
-            else if (permiso.CantidadLecciones.HasValue && permiso.CantidadLecciones.Value > 0)
-                return $"{permiso.CantidadLecciones} Lecciones";
-            else
-                return "No Aplica";
-        }
+        [StringLength(50, ErrorMessage = "El tipo de rebajo no puede exceder los 50 caracteres")]
+        [Display(Name = "Tipo de rebajo")]
+        public string? TipoRebajo { get; set; }
     }
 }

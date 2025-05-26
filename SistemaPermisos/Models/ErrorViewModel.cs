@@ -7,4 +7,3 @@ namespace SistemaPermisos.Models
         public bool ShowRequestId => !string.IsNullOrEmpty(RequestId);
     }
 }
-

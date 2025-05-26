@@ -6,28 +6,28 @@ namespace SistemaPermisos.Models
 {
     public class TwoFactorAuth
     {
+        [Key]
         public int Id { get; set; }
 
-        [Required]
         public int UsuarioId { get; set; }
 
         [Required]
+        [StringLength(100)]
+        public string ClaveSecreta { get; set; } = string.Empty;
+
         public bool Habilitado { get; set; } = false;
 
-        [Required]
-        [StringLength(100)]
-        public string ClaveSecreta { get; set; }
+        public DateTime FechaCreacion { get; set; } = DateTime.Now;
 
-        [StringLength(10)]
-        public string UltimoCodigo { get; set; }
-
-        public DateTime? FechaExpiracionCodigo { get; set; }
-
-        [Required]
         public DateTime FechaActualizacion { get; set; } = DateTime.Now;
 
-        // Relación con Usuario
+        [StringLength(10)]
+        public string? UltimoCodigo { get; set; }
+
+        public DateTime? FechaUltimoCodigo { get; set; }
+
+        // Navegación
         [ForeignKey("UsuarioId")]
-        public virtual Usuario Usuario { get; set; }
+        public virtual Usuario? Usuario { get; set; }
     }
 }

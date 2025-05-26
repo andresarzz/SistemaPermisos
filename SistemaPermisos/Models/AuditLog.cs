@@ -11,60 +11,60 @@ namespace SistemaPermisos.Models
 
         public int? UsuarioId { get; set; }
 
-        [ForeignKey("UsuarioId")]
-        public virtual Usuario Usuario { get; set; }
+        [Required]
+        [StringLength(50)]
+        public string Accion { get; set; } = string.Empty;
 
         [Required]
         [StringLength(50)]
-        [Display(Name = "Acción")]
-        public string Accion { get; set; }
+        public string Entidad { get; set; } = string.Empty;
+
+        public int? RegistroId { get; set; }
+
+        [StringLength(2000)]
+        public string? ValoresAnteriores { get; set; }
+
+        [StringLength(2000)]
+        public string? ValoresNuevos { get; set; }
 
         [Required]
-        [StringLength(50)]
-        [Display(Name = "Entidad")]
-        public string Entidad { get; set; }
-
-        [Display(Name = "ID de Entidad")]
-        public int? EntidadId { get; set; }
-
-        [Display(Name = "Datos Antiguos")]
-        public string DatosAntiguos { get; set; }
-
-        [Display(Name = "Datos Nuevos")]
-        public string DatosNuevos { get; set; }
+        [StringLength(45)]
+        public string DireccionIP { get; set; } = string.Empty;
 
         [Required]
-        [StringLength(50)]
-        [Display(Name = "Dirección IP")]
-        public string DireccionIP { get; set; }
+        public DateTime Fecha { get; set; } = DateTime.Now;
 
-        [Display(Name = "User Agent")]
-        public string UserAgent { get; set; }
+        // Propiedades de compatibilidad (NotMapped para evitar duplicación en BD)
+        [NotMapped]
+        public string? DatosAntiguos
+        {
+            get => ValoresAnteriores;
+            set => ValoresAnteriores = value;
+        }
 
-        [Required]
-        [Display(Name = "Fecha y Hora")]
-        public DateTime FechaHora { get; set; } = DateTime.Now;
+        [NotMapped]
+        public string? DatosNuevos
+        {
+            get => ValoresNuevos;
+            set => ValoresNuevos = value;
+        }
 
-        // Propiedades de compatibilidad para código existente
         [NotMapped]
         public string Tabla
         {
-            get { return Entidad; }
-            set { Entidad = value; }
+            get => Entidad;
+            set => Entidad = value;
         }
 
         [NotMapped]
-        public DateTime Fecha
+        public int? EntidadId
         {
-            get { return FechaHora; }
-            set { FechaHora = value; }
+            get => RegistroId;
+            set => RegistroId = value;
         }
 
-        [NotMapped]
-        public int? RegistroId
-        {
-            get { return EntidadId; }
-            set { EntidadId = value; }
-        }
+        // Navegación
+        [ForeignKey("UsuarioId")]
+        public virtual Usuario? Usuario { get; set; }
     }
 }

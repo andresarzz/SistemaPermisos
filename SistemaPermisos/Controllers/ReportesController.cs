@@ -8,8 +8,8 @@ using Microsoft.EntityFrameworkCore;
 using SistemaPermisos.Data;
 using SistemaPermisos.Models;
 using SistemaPermisos.ViewModels;
-using Microsoft.AspNetCore.Hosting;
 using SistemaPermisos.Services;
+using Microsoft.AspNetCore.Hosting;
 
 namespace SistemaPermisos.Controllers
 {
@@ -118,7 +118,7 @@ namespace SistemaPermisos.Controllers
             if (ModelState.IsValid)
             {
                 // Procesar la imagen del reporte
-                string rutaImagen = null;
+                string? rutaImagen = null;
                 if (model.Imagen != null)
                 {
                     string uploadsFolder = Path.Combine(_hostEnvironment.WebRootPath, "uploads", "reportes");
@@ -199,8 +199,8 @@ namespace SistemaPermisos.Controllers
                 "Actualizar",
                 "ReporteDano",
                 reporte.Id,
-                $"Estado anterior: Pendiente",
-                $"Nuevo estado: Resuelto"
+                "Estado anterior: Pendiente",
+                "Nuevo estado: Resuelto"
             );
 
             return RedirectToAction(nameof(Index));

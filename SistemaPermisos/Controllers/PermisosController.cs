@@ -161,7 +161,7 @@ namespace SistemaPermisos.Controllers
                         TipoConvocatoria = model.TipoConvocatoria,
                         Motivo = model.TipoMotivo == "Asuntos personales" ? model.Motivo : model.TipoMotivo,
                         Observaciones = model.Observaciones,
-                        HoraSalida = !string.IsNullOrEmpty(model.HoraSalida) ? TimeSpan.Parse(model.HoraSalida) : null,
+                        HoraSalida = model.HoraSalida,
                         RutaComprobante = rutaComprobante,
                         Estado = "Pendiente",
                         FechaSolicitud = DateTime.Now,

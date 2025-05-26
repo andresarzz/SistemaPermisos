@@ -1,4 +1,5 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Http;
 
@@ -10,12 +11,12 @@ namespace SistemaPermisos.ViewModels
 
         [Required(ErrorMessage = "El nombre es obligatorio")]
         [Display(Name = "Nombre Completo")]
-        public string Nombre { get; set; }
+        public string Nombre { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "El correo es obligatorio")]
         [EmailAddress(ErrorMessage = "Formato de correo inválido")]
         [Display(Name = "Correo Electrónico")]
-        public string Correo { get; set; }
+        public string Correo { get; set; } = string.Empty;
 
         [Display(Name = "Teléfono")]
         [Phone(ErrorMessage = "Formato de teléfono inválido")]
@@ -42,7 +43,6 @@ namespace SistemaPermisos.ViewModels
         public DateTime FechaRegistro { get; set; }
 
         [Display(Name = "Rol")]
-        public string Rol { get; set; }
+        public string Rol { get; set; } = string.Empty;
     }
 }
-

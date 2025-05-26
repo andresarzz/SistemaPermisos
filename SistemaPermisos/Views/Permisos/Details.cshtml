@@ -53,19 +53,28 @@
 
             <h4 class="border-bottom pb-2 mt-4">Detalles del Permiso</h4>
             <dl class="row">
+                <dt class="col-sm-3">Tipo de Permiso:</dt>
+                <dd class="col-sm-9">@Model.TipoPermiso</dd>
+
                 <dt class="col-sm-3">Fecha:</dt>
                 <dd class="col-sm-9">@Model.Fecha.ToString("dd/MM/yyyy")</dd>
+
+                <dt class="col-sm-3">Fecha de Inicio:</dt>
+                <dd class="col-sm-9">@Model.FechaInicio.ToString("dd/MM/yyyy")</dd>
+
+                <dt class="col-sm-3">Fecha de Fin:</dt>
+                <dd class="col-sm-9">@Model.FechaFin.ToString("dd/MM/yyyy")</dd>
 
                 @if (Model.HoraDesde.HasValue)
                 {
                     <dt class="col-sm-3">Hora Desde:</dt>
-                    <dd class="col-sm-9">@Model.HoraDesde.Value.ToString("HH:mm")</dd>
+                    <dd class="col-sm-9">@Model.HoraDesde.Value.ToString(@"hh\:mm")</dd>
                 }
 
                 @if (Model.HoraHasta.HasValue)
                 {
                     <dt class="col-sm-3">Hora Hasta:</dt>
-                    <dd class="col-sm-9">@Model.HoraHasta.Value.ToString("HH:mm")</dd>
+                    <dd class="col-sm-9">@Model.HoraHasta.Value.ToString(@"hh\:mm")</dd>
                 }
 
                 <dt class="col-sm-3">Tipo de Jornada:</dt>
@@ -177,4 +186,3 @@
         </div>
     </div>
 </div>
-
