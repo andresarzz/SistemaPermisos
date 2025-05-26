@@ -1,0 +1,78 @@
+﻿@model SistemaPermisos.Models.Usuario
+
+@{
+    ViewData["Title"] = "Detalles del Usuario";
+}
+
+<div class="container">
+    <div class="card mb-4">
+        <div class="card-header">
+            <h1><i class="fas fa-user"></i> @ViewData["Title"]</h1>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4 text-center">
+                    @if (!string.IsNullOrEmpty(Model.FotoPerfil))
+                    {
+                        <img src="@Model.FotoPerfil" alt="Foto de Perfil" class="img-fluid rounded-circle mb-3" style="width: 200px; height: 200px; object-fit: cover;">
+                    }
+                    else
+                    {
+                        <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 200px; height: 200px;">
+                            <i class="fas fa-user fa-5x text-white"></i>
+                        </div>
+                    }
+                    <h3>@Model.Nombre</h3>
+                    <p>
+                        <span class="badge @(Model.Rol == "Admin" ? "bg-danger" : "bg-primary")">
+                            @Model.Rol
+                        </span>
+                    </p>
+                </div>
+                <div class="col-md-8">
+                    <h4 class="border-bottom pb-2">Información Personal</h4>
+                    <dl class="row">
+                        <dt class="col-sm-4">Correo Electrónico:</dt>
+                        <dd class="col-sm-8">@Model.Correo</dd>
+
+                        <dt class="col-sm-4">Cédula:</dt>
+                        <dd class="col-sm-8">@(string.IsNullOrEmpty(Model.Cedula) ? "No especificada" : Model.Cedula)</dd>
+
+                        <dt class="col-sm-4">Puesto:</dt>
+                        <dd class="col-sm-8">@(string.IsNullOrEmpty(Model.Puesto) ? "No especificado" : Model.Puesto)</dd>
+
+                        <dt class="col-sm-4">Teléfono:</dt>
+                        <dd class="col-sm-8">@(string.IsNullOrEmpty(Model.Telefono) ? "No especificado" : Model.Telefono)</dd>
+
+                        <dt class="col-sm-4">Departamento:</dt>
+                        <dd class="col-sm-8">@(string.IsNullOrEmpty(Model.Departamento) ? "No especificado" : Model.Departamento)</dd>
+
+                        <dt class="col-sm-4">Dirección:</dt>
+                        <dd class="col-sm-8">@(string.IsNullOrEmpty(Model.Direccion) ? "No especificada" : Model.Direccion)</dd>
+
+                        <dt class="col-sm-4">Fecha de Nacimiento:</dt>
+                        <dd class="col-sm-8">@(Model.FechaNacimiento.HasValue ? Model.FechaNacimiento.Value.ToString("dd/MM/yyyy") : "No especificada")</dd>
+
+                        <dt class="col-sm-4">Fecha de Registro:</dt>
+                        <dd class="col-sm-8">@Model.FechaRegistro.ToString("dd/MM/yyyy")</dd>
+
+                        <dt class="col-sm-4">Última Actualización:</dt>
+                        <dd class="col-sm-8">@Model.UltimaActualizacion.ToString("dd/MM/yyyy HH:mm")</dd>
+                    </dl>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">
+                    <i class="fas fa-edit"></i> Editar
+                </a>
+                <a asp-action="ChangeRole" asp-route-id="@Model.Id" class="btn btn-warning">
+                    <i class="fas fa-user-tag"></i> Cambiar Rol
+                </a>
+                <a asp-action="Index" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Volver a la Lista
+                </a>
+            </div>
+        </div>
+    </div>
+</div>

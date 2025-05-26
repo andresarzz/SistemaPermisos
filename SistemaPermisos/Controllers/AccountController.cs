@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SistemaPermisos.Data;
 using SistemaPermisos.Models;
+using SistemaPermisos.Services;
 using SistemaPermisos.ViewModels;
 using System;
 using System.Linq;
@@ -13,12 +14,20 @@ namespace SistemaPermisos.Controllers
     public class AccountController : Controller
     {
         private readonly ApplicationDbContext _context;
-        private readonly IWebHostEnvironment _hostEnvironment;
+        private readonly IUserService _userService;
+        private readonly IAuditService _auditService;
+        private readonly IEmailService _emailService;
 
-        public AccountController(ApplicationDbContext context, IWebHostEnvironment hostEnvironment)
+        public AccountController(
+            ApplicationDbContext context,
+            IUserService userService,
+            IAuditService auditService,
+            IEmailService emailService)
         {
             _context = context;
-            _hostEnvironment = hostEnvironment;
+            _userService = userService;
+            _auditService = auditService;
+            _emailService = emailService;
         }
 
         // GET: Account/Login
@@ -36,30 +45,49 @@ namespace SistemaPermisos.Controllers
         // POST: Account/Login
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Login(LoginViewModel model)
+        public async Task<IActionResult> Login(LoginViewModel model)
         {
             if (ModelState.IsValid)
             {
-                var usuario = _context.Usuarios.FirstOrDefault(u => u.Correo == model.Correo);
-
-                if (usuario != null && BCrypt.Net.BCrypt.Verify(model.Password, usuario.Password))
+                try
                 {
-                    // Verificar si el usuario está activo
-                    if (!usuario.Activo)
+                    var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Correo == model.Correo);
+
+                    if (usuario != null && BCrypt.Net.BCrypt.Verify(model.Password, usuario.Password))
                     {
-                        ModelState.AddModelError("", "Esta cuenta ha sido desactivada. Contacte al administrador.");
-                        return View(model);
+                        // Verificar si el usuario está activo
+                        if (!usuario.Activo)
+                        {
+                            ModelState.AddModelError("", "Esta cuenta ha sido desactivada. Contacte al administrador.");
+                            return View(model);
+                        }
+
+                        // Guardar información del usuario en la sesión
+                        HttpContext.Session.SetInt32("UsuarioId", usuario.Id);
+                        HttpContext.Session.SetString("UsuarioNombre", usuario.Nombre);
+                        HttpContext.Session.SetString("UsuarioRol", usuario.Rol);
+
+                        // Registrar en auditoría
+                        await _auditService.LogActivityAsync(
+                            usuario.Id,
+                            "Iniciar Sesión",
+                            "Usuario",
+                            usuario.Id,
+                            null,
+                            "Inicio de sesión exitoso"
+                        );
+
+                        return RedirectToAction("Index", "Home");
                     }
 
-                    // Guardar información del usuario en la sesión
-                    HttpContext.Session.SetInt32("UsuarioId", usuario.Id);
-                    HttpContext.Session.SetString("UsuarioNombre", usuario.Nombre);
-                    HttpContext.Session.SetString("UsuarioRol", usuario.Rol);
-
-                    return RedirectToAction("Index", "Home");
+                    ModelState.AddModelError("", "Correo o contraseña incorrectos");
                 }
-
-                ModelState.AddModelError("", "Correo o contraseña incorrectos");
+                catch (Exception ex)
+                {
+                    // Registrar la excepción
+                    System.Diagnostics.Debug.WriteLine($"Error al iniciar sesión: {ex.Message}");
+                    ModelState.AddModelError("", "Ocurrió un error al procesar la solicitud. Intente nuevamente.");
+                }
             }
 
             return View(model);
@@ -96,43 +124,86 @@ namespace SistemaPermisos.Controllers
 
             if (ModelState.IsValid)
             {
-                // Verificar si el correo ya existe
-                if (_context.Usuarios.Any(u => u.Correo == model.Correo))
+                try
                 {
-                    ModelState.AddModelError("Correo", "Este correo ya está registrado");
-                    return View(model);
+                    // Verificar si el correo ya existe
+                    if (await _context.Usuarios.AnyAsync(u => u.Correo == model.Correo))
+                    {
+                        ModelState.AddModelError("Correo", "Este correo ya está registrado");
+                        return View(model);
+                    }
+
+                    // Crear nuevo usuario
+                    var usuario = new Usuario
+                    {
+                        Nombre = model.Nombre,
+                        Correo = model.Correo,
+                        Password = BCrypt.Net.BCrypt.HashPassword(model.Password),
+                        Rol = "Docente", // Por defecto es Docente
+                        FechaRegistro = DateTime.Now,
+                        UltimaActualizacion = DateTime.Now,
+                        Activo = true
+                    };
+
+                    _context.Add(usuario);
+                    await _context.SaveChangesAsync();
+
+                    // Registrar en auditoría
+                    await _auditService.LogActivityAsync(
+                        usuarioId,
+                        "Crear",
+                        "Usuario",
+                        usuario.Id,
+                        null,
+                        $"Usuario creado: {usuario.Nombre} ({usuario.Correo})"
+                    );
+
+                    // Enviar correo de bienvenida
+                    await _emailService.SendWelcomeEmailAsync(usuario.Correo, usuario.Nombre);
+
+                    TempData["SuccessMessage"] = "Usuario registrado correctamente.";
+                    return RedirectToAction("Index", "Users");
                 }
-
-                // Crear nuevo usuario
-                var usuario = new Usuario
+                catch (Exception ex)
                 {
-                    Nombre = model.Nombre,
-                    Correo = model.Correo,
-                    Password = BCrypt.Net.BCrypt.HashPassword(model.Password),
-                    Rol = "Docente", // Por defecto es Docente
-                    FechaRegistro = DateTime.Now,
-                    UltimaActualizacion = DateTime.Now,
-                    Activo = true
-                };
-
-                _context.Add(usuario);
-                await _context.SaveChangesAsync();
-
-                // Registrar en auditoría si existe el servicio
-                // Aquí se podría agregar código para registrar la acción en la auditoría
-
-                TempData["SuccessMessage"] = "Usuario registrado correctamente.";
-                return RedirectToAction("Index", "Users");
+                    // Registrar la excepción
+                    System.Diagnostics.Debug.WriteLine($"Error al registrar usuario: {ex.Message}");
+                    ModelState.AddModelError("", "Ocurrió un error al procesar la solicitud. Intente nuevamente.");
+                }
             }
 
             return View(model);
         }
 
         // GET: Account/Logout
-        public IActionResult Logout()
+        public async Task<IActionResult> Logout()
         {
-            // Limpiar la sesión
-            HttpContext.Session.Clear();
+            try
+            {
+                // Obtener el ID del usuario antes de limpiar la sesión
+                var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
+
+                if (usuarioId.HasValue)
+                {
+                    // Registrar en auditoría
+                    await _auditService.LogActivityAsync(
+                        usuarioId.Value,
+                        "Cerrar Sesión",
+                        "Usuario",
+                        usuarioId.Value,
+                        null,
+                        "Cierre de sesión"
+                    );
+                }
+
+                // Limpiar la sesión
+                HttpContext.Session.Clear();
+            }
+            catch (Exception ex)
+            {
+                // Registrar la excepción
+                System.Diagnostics.Debug.WriteLine($"Error al cerrar sesión: {ex.Message}");
+            }
 
             return RedirectToAction("Login");
         }
@@ -150,35 +221,58 @@ namespace SistemaPermisos.Controllers
         {
             if (ModelState.IsValid)
             {
-                var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Correo == model.Correo);
-                if (usuario == null)
+                try
                 {
-                    // No revelar que el usuario no existe
-                    TempData["SuccessMessage"] = "Si su correo está registrado, recibirá instrucciones para restablecer su contraseña.";
+                    var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Correo == model.Correo);
+                    if (usuario == null)
+                    {
+                        // No revelar que el usuario no existe
+                        TempData["SuccessMessage"] = "Si su correo está registrado, recibirá instrucciones para restablecer su contraseña.";
+                        return RedirectToAction("Login");
+                    }
+
+                    // Generar token de restablecimiento
+                    string token = Guid.NewGuid().ToString();
+                    DateTime expiracion = DateTime.Now.AddHours(24);
+
+                    // Guardar token en la base de datos
+                    var passwordReset = new PasswordReset
+                    {
+                        UsuarioId = usuario.Id,
+                        Token = token,
+                        FechaExpiracion = expiracion,
+                        Utilizado = false,
+                        FechaCreacion = DateTime.Now
+                    };
+
+                    _context.Add(passwordReset);
+                    await _context.SaveChangesAsync();
+
+                    // Registrar en auditoría
+                    await _auditService.LogActivityAsync(
+                        null,
+                        "Solicitar Restablecimiento",
+                        "Usuario",
+                        usuario.Id,
+                        null,
+                        "Solicitud de restablecimiento de contraseña"
+                    );
+
+                    // Construir el enlace de restablecimiento
+                    var resetLink = Url.Action("ResetPassword", "Account", new { token }, Request.Scheme);
+
+                    // Enviar correo con el enlace
+                    await _emailService.SendPasswordResetEmailAsync(usuario.Correo, resetLink);
+
+                    TempData["SuccessMessage"] = "Se han enviado instrucciones a su correo electrónico.";
                     return RedirectToAction("Login");
                 }
-
-                // Generar token de restablecimiento
-                string token = Guid.NewGuid().ToString();
-                DateTime expiracion = DateTime.Now.AddHours(24);
-
-                // Guardar token en la base de datos (si existe la tabla PasswordResets)
-                var passwordReset = new PasswordReset
+                catch (Exception ex)
                 {
-                    UsuarioId = usuario.Id,
-                    Token = token,
-                    FechaExpiracion = expiracion,
-                    Utilizado = false,
-                    FechaCreacion = DateTime.Now
-                };
-
-                _context.Add(passwordReset);
-                await _context.SaveChangesAsync();
-
-                // Aquí se enviaría un correo con el enlace para restablecer la contraseña
-                // Por ahora, solo mostramos un mensaje de éxito
-                TempData["SuccessMessage"] = "Se han enviado instrucciones a su correo electrónico.";
-                return RedirectToAction("Login");
+                    // Registrar la excepción
+                    System.Diagnostics.Debug.WriteLine($"Error al procesar solicitud de restablecimiento: {ex.Message}");
+                    ModelState.AddModelError("", "Ocurrió un error al procesar la solicitud. Intente nuevamente.");
+                }
             }
 
             return View(model);
@@ -192,22 +286,32 @@ namespace SistemaPermisos.Controllers
                 return RedirectToAction("Login");
             }
 
-            // Verificar si el token es válido
-            var passwordReset = await _context.PasswordResets
-                .FirstOrDefaultAsync(pr => pr.Token == token && !pr.Utilizado && pr.FechaExpiracion > DateTime.Now);
-
-            if (passwordReset == null)
+            try
             {
-                TempData["ErrorMessage"] = "El enlace para restablecer la contraseña es inválido o ha expirado.";
+                // Verificar si el token es válido
+                var passwordReset = await _context.PasswordResets
+                    .FirstOrDefaultAsync(pr => pr.Token == token && !pr.Utilizado && pr.FechaExpiracion > DateTime.Now);
+
+                if (passwordReset == null)
+                {
+                    TempData["ErrorMessage"] = "El enlace para restablecer la contraseña es inválido o ha expirado.";
+                    return RedirectToAction("Login");
+                }
+
+                var model = new ResetPasswordViewModel
+                {
+                    Token = token
+                };
+
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                // Registrar la excepción
+                System.Diagnostics.Debug.WriteLine($"Error al verificar token: {ex.Message}");
+                TempData["ErrorMessage"] = "Ocurrió un error al procesar la solicitud. Intente nuevamente.";
                 return RedirectToAction("Login");
             }
-
-            var model = new ResetPasswordViewModel
-            {
-                Token = token
-            };
-
-            return View(model);
         }
 
         // POST: Account/ResetPassword
@@ -217,37 +321,62 @@ namespace SistemaPermisos.Controllers
         {
             if (ModelState.IsValid)
             {
-                // Verificar si el token es válido
-                var passwordReset = await _context.PasswordResets
-                    .FirstOrDefaultAsync(pr => pr.Token == model.Token && !pr.Utilizado && pr.FechaExpiracion > DateTime.Now);
-
-                if (passwordReset == null)
+                try
                 {
-                    TempData["ErrorMessage"] = "El enlace para restablecer la contraseña es inválido o ha expirado.";
+                    // Verificar si el token es válido
+                    var passwordReset = await _context.PasswordResets
+                        .FirstOrDefaultAsync(pr => pr.Token == model.Token && !pr.Utilizado && pr.FechaExpiracion > DateTime.Now);
+
+                    if (passwordReset == null)
+                    {
+                        TempData["ErrorMessage"] = "El enlace para restablecer la contraseña es inválido o ha expirado.";
+                        return RedirectToAction("Login");
+                    }
+
+                    // Actualizar contraseña del usuario
+                    var usuario = await _context.Usuarios.FindAsync(passwordReset.UsuarioId);
+                    if (usuario == null)
+                    {
+                        TempData["ErrorMessage"] = "Usuario no encontrado.";
+                        return RedirectToAction("Login");
+                    }
+
+                    usuario.Password = BCrypt.Net.BCrypt.HashPassword(model.Password);
+                    usuario.UltimaActualizacion = DateTime.Now;
+
+                    // Marcar el token como utilizado
+                    passwordReset.Utilizado = true;
+
+                    await _context.SaveChangesAsync();
+
+                    // Registrar en auditoría
+                    await _auditService.LogActivityAsync(
+                        usuario.Id,
+                        "Restablecer Contraseña",
+                        "Usuario",
+                        usuario.Id,
+                        null,
+                        "Contraseña restablecida correctamente"
+                    );
+
+                    TempData["SuccessMessage"] = "Su contraseña ha sido restablecida correctamente.";
                     return RedirectToAction("Login");
                 }
-
-                // Actualizar contraseña del usuario
-                var usuario = await _context.Usuarios.FindAsync(passwordReset.UsuarioId);
-                if (usuario == null)
+                catch (Exception ex)
                 {
-                    TempData["ErrorMessage"] = "Usuario no encontrado.";
-                    return RedirectToAction("Login");
+                    // Registrar la excepción
+                    System.Diagnostics.Debug.WriteLine($"Error al restablecer contraseña: {ex.Message}");
+                    ModelState.AddModelError("", "Ocurrió un error al procesar la solicitud. Intente nuevamente.");
                 }
-
-                usuario.Password = BCrypt.Net.BCrypt.HashPassword(model.Password);
-                usuario.UltimaActualizacion = DateTime.Now;
-
-                // Marcar el token como utilizado
-                passwordReset.Utilizado = true;
-
-                await _context.SaveChangesAsync();
-
-                TempData["SuccessMessage"] = "Su contraseña ha sido restablecida correctamente.";
-                return RedirectToAction("Login");
             }
 
             return View(model);
+        }
+
+        // GET: Account/AccessDenied
+        public IActionResult AccessDenied()
+        {
+            return View();
         }
     }
 }

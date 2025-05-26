@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SistemaPermisos.Models
 {
@@ -10,11 +11,11 @@ namespace SistemaPermisos.Models
         public int UsuarioId { get; set; }
 
         [Required]
-        [Display(Name = "Permiso")]
+        [StringLength(100)]
         public string Permiso { get; set; }
 
-        // Relaciones
+        // Relación con Usuario
+        [ForeignKey("UsuarioId")]
         public virtual Usuario Usuario { get; set; }
     }
 }
-

@@ -15,6 +15,7 @@ namespace SistemaPermisos.Services
         private readonly string _smtpPassword;
         private readonly string _fromEmail;
         private readonly string _fromName;
+        private readonly bool _enableSsl;
 
         public EmailService(IConfiguration configuration)
         {
@@ -25,9 +26,10 @@ namespace SistemaPermisos.Services
             _smtpPassword = _configuration["Email:SmtpPassword"];
             _fromEmail = _configuration["Email:FromEmail"];
             _fromName = _configuration["Email:FromName"];
+            _enableSsl = bool.Parse(_configuration["Email:EnableSsl"]);
         }
 
-        public async Task SendEmailAsync(string to, string subject, string body, bool isHtml = true)
+        public async Task<bool> SendEmailAsync(string to, string subject, string body, bool isHtml = true)
         {
             try
             {
@@ -38,108 +40,163 @@ namespace SistemaPermisos.Services
                     Body = body,
                     IsBodyHtml = isHtml
                 };
+
                 message.To.Add(new MailAddress(to));
 
                 using (var client = new SmtpClient(_smtpServer, _smtpPort))
                 {
+                    client.EnableSsl = _enableSsl;
                     client.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-                    client.EnableSsl = true;
                     await client.SendMailAsync(message);
                 }
+
+                return true;
             }
             catch (Exception ex)
             {
-                // Log the exception
-                Console.WriteLine($"Error sending email: {ex.Message}");
-                throw;
+                // Registrar el error
+                System.Diagnostics.Debug.WriteLine($"Error al enviar correo: {ex.Message}");
+                return false;
             }
         }
 
-        public async Task SendWelcomeEmailAsync(string to, string name)
-        {
-            string subject = "Bienvenido al Sistema de Gestión de Permisos";
-            string body = $@"
-                <html>
-                <body>
-                    <h2>Bienvenido, {name}!</h2>
-                    <p>Su cuenta ha sido creada exitosamente en el Sistema de Gestión de Permisos.</p>
-                    <p>Ahora puede iniciar sesión y comenzar a utilizar el sistema.</p>
-                    <p>Saludos cordiales,<br>El equipo de administración</p>
-                </body>
-                </html>";
-
-            await SendEmailAsync(to, subject, body);
-        }
-
-        public async Task SendPasswordResetEmailAsync(string to, string name, string resetLink)
+        public async Task<bool> SendPasswordResetEmailAsync(string to, string resetLink)
         {
             string subject = "Restablecimiento de Contraseña";
             string body = $@"
                 <html>
+                <head>
+                    <style>
+                        body {{ font-family: Arial, sans-serif; line-height: 1.6; }}
+                        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                        .header {{ background-color: #f8f9fa; padding: 10px; text-align: center; }}
+                        .content {{ padding: 20px; }}
+                        .button {{ display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; }}
+                        .footer {{ background-color: #f8f9fa; padding: 10px; text-align: center; font-size: 12px; }}
+                    </style>
+                </head>
                 <body>
-                    <h2>Hola, {name}</h2>
-                    <p>Hemos recibido una solicitud para restablecer su contraseña.</p>
-                    <p>Para continuar con el proceso, haga clic en el siguiente enlace:</p>
-                    <p><a href='{resetLink}'>Restablecer mi contraseña</a></p>
-                    <p>Este enlace expirará en 24 horas.</p>
-                    <p>Si usted no solicitó este cambio, puede ignorar este correo.</p>
-                    <p>Saludos cordiales,<br>El equipo de administración</p>
+                    <div class='container'>
+                        <div class='header'>
+                            <h2>Restablecimiento de Contraseña</h2>
+                        </div>
+                        <div class='content'>
+                            <p>Hemos recibido una solicitud para restablecer la contraseña de su cuenta.</p>
+                            <p>Para continuar con el proceso, haga clic en el siguiente enlace:</p>
+                            <p><a href='{resetLink}' class='button'>Restablecer Contraseña</a></p>
+                            <p>Si no solicitó restablecer su contraseña, puede ignorar este correo.</p>
+                            <p>El enlace expirará en 24 horas.</p>
+                        </div>
+                        <div class='footer'>
+                            <p>Este es un correo automático, por favor no responda a este mensaje.</p>
+                        </div>
+                    </div>
                 </body>
                 </html>";
 
-            await SendEmailAsync(to, subject, body);
+            return await SendEmailAsync(to, subject, body);
         }
 
-        public async Task Send2FACodeAsync(string to, string name, string code)
+        public async Task<bool> SendWelcomeEmailAsync(string to, string userName)
+        {
+            string subject = "Bienvenido al Sistema de Permisos";
+            string body = $@"
+                <html>
+                <head>
+                    <style>
+                        body {{ font-family: Arial, sans-serif; line-height: 1.6; }}
+                        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                        .header {{ background-color: #f8f9fa; padding: 10px; text-align: center; }}
+                        .content {{ padding: 20px; }}
+                        .footer {{ background-color: #f8f9fa; padding: 10px; text-align: center; font-size: 12px; }}
+                    </style>
+                </head>
+                <body>
+                    <div class='container'>
+                        <div class='header'>
+                            <h2>¡Bienvenido al Sistema de Permisos!</h2>
+                        </div>
+                        <div class='content'>
+                            <p>Hola {userName},</p>
+                            <p>Su cuenta ha sido creada exitosamente en nuestro sistema.</p>
+                            <p>Ahora puede iniciar sesión y comenzar a utilizar todas las funcionalidades disponibles.</p>
+                            <p>Si tiene alguna pregunta o necesita ayuda, no dude en contactar al administrador del sistema.</p>
+                        </div>
+                        <div class='footer'>
+                            <p>Este es un correo automático, por favor no responda a este mensaje.</p>
+                        </div>
+                    </div>
+                </body>
+                </html>";
+
+            return await SendEmailAsync(to, subject, body);
+        }
+
+        public async Task<bool> SendNotificationAsync(string to, string subject, string message)
+        {
+            string body = $@"
+                <html>
+                <head>
+                    <style>
+                        body {{ font-family: Arial, sans-serif; line-height: 1.6; }}
+                        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                        .header {{ background-color: #f8f9fa; padding: 10px; text-align: center; }}
+                        .content {{ padding: 20px; }}
+                        .footer {{ background-color: #f8f9fa; padding: 10px; text-align: center; font-size: 12px; }}
+                    </style>
+                </head>
+                <body>
+                    <div class='container'>
+                        <div class='header'>
+                            <h2>{subject}</h2>
+                        </div>
+                        <div class='content'>
+                            <p>{message}</p>
+                        </div>
+                        <div class='footer'>
+                            <p>Este es un correo automático, por favor no responda a este mensaje.</p>
+                        </div>
+                    </div>
+                </body>
+                </html>";
+
+            return await SendEmailAsync(to, subject, body);
+        }
+
+        public async Task<bool> Send2FACodeAsync(string to, string code)
         {
             string subject = "Código de Verificación";
             string body = $@"
                 <html>
+                <head>
+                    <style>
+                        body {{ font-family: Arial, sans-serif; line-height: 1.6; }}
+                        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                        .header {{ background-color: #f8f9fa; padding: 10px; text-align: center; }}
+                        .content {{ padding: 20px; }}
+                        .code {{ font-size: 24px; font-weight: bold; text-align: center; padding: 10px; background-color: #f8f9fa; margin: 20px 0; }}
+                        .footer {{ background-color: #f8f9fa; padding: 10px; text-align: center; font-size: 12px; }}
+                    </style>
+                </head>
                 <body>
-                    <h2>Hola, {name}</h2>
-                    <p>Su código de verificación es:</p>
-                    <h1 style='text-align: center; font-size: 32px; letter-spacing: 5px;'>{code}</h1>
-                    <p>Este código expirará en 5 minutos.</p>
-                    <p>Si usted no solicitó este código, por favor contacte al administrador.</p>
-                    <p>Saludos cordiales,<br>El equipo de administración</p>
+                    <div class='container'>
+                        <div class='header'>
+                            <h2>Código de Verificación</h2>
+                        </div>
+                        <div class='content'>
+                            <p>Su código de verificación es:</p>
+                            <div class='code'>{code}</div>
+                            <p>Este código expirará en 5 minutos.</p>
+                            <p>Si no solicitó este código, por favor ignore este correo y cambie su contraseña inmediatamente.</p>
+                        </div>
+                        <div class='footer'>
+                            <p>Este es un correo automático, por favor no responda a este mensaje.</p>
+                        </div>
+                    </div>
                 </body>
                 </html>";
 
-            await SendEmailAsync(to, subject, body);
-        }
-
-        public async Task SendPermissionApprovedEmailAsync(string to, string name, int permisoId)
-        {
-            string subject = "Solicitud de Permiso Aprobada";
-            string body = $@"
-                <html>
-                <body>
-                    <h2>Hola, {name}</h2>
-                    <p>Nos complace informarle que su solicitud de permiso (ID: {permisoId}) ha sido aprobada.</p>
-                    <p>Puede ver los detalles de la aprobación en el sistema.</p>
-                    <p>Saludos cordiales,<br>El equipo de administración</p>
-                </body>
-                </html>";
-
-            await SendEmailAsync(to, subject, body);
-        }
-
-        public async Task SendPermissionRejectedEmailAsync(string to, string name, int permisoId, string reason)
-        {
-            string subject = "Solicitud de Permiso Rechazada";
-            string body = $@"
-                <html>
-                <body>
-                    <h2>Hola, {name}</h2>
-                    <p>Lamentamos informarle que su solicitud de permiso (ID: {permisoId}) ha sido rechazada.</p>
-                    <p><strong>Motivo:</strong> {reason}</p>
-                    <p>Si tiene alguna pregunta, por favor contacte al administrador.</p>
-                    <p>Saludos cordiales,<br>El equipo de administración</p>
-                </body>
-                </html>";
-
-            await SendEmailAsync(to, subject, body);
+            return await SendEmailAsync(to, subject, body);
         }
     }
 }
-

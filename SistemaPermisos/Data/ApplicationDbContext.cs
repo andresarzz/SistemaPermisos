@@ -59,7 +59,7 @@ namespace SistemaPermisos.Data
             // Configuración de UserPermission
             modelBuilder.Entity<UserPermission>()
                 .HasOne(p => p.Usuario)
-                .WithMany(u => u.Permisos)
+                .WithMany(u => u.UserPermissions)
                 .HasForeignKey(p => p.UsuarioId)
                 .OnDelete(DeleteBehavior.Cascade);
 

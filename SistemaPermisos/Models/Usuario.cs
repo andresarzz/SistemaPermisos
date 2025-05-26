@@ -6,6 +6,15 @@ namespace SistemaPermisos.Models
 {
     public class Usuario
     {
+        public Usuario()
+        {
+            // Inicializar colecciones para evitar NullReferenceException
+            Permisos = new List<Permiso>();
+            OmisionesMarca = new List<OmisionMarca>();
+            ReportesDanos = new List<ReporteDano>();
+            UserPermissions = new List<UserPermission>();
+        }
+
         public int Id { get; set; }
 
         [Required(ErrorMessage = "El nombre es obligatorio")]
@@ -18,28 +27,12 @@ namespace SistemaPermisos.Models
         public string Correo { get; set; }
 
         [Required(ErrorMessage = "La contraseña es obligatoria")]
-        [DataType(DataType.Password)]
         [Display(Name = "Contraseña")]
         public string Password { get; set; }
 
+        [Required(ErrorMessage = "El rol es obligatorio")]
         [Display(Name = "Rol")]
-        public string Rol { get; set; } = "Docente"; // Por defecto es Docente, puede ser Admin
-
-        [Display(Name = "Foto de Perfil")]
-        public string FotoPerfil { get; set; }
-
-        [Display(Name = "Teléfono")]
-        public string Telefono { get; set; }
-
-        [Display(Name = "Departamento")]
-        public string Departamento { get; set; }
-
-        [Display(Name = "Fecha de Nacimiento")]
-        [DataType(DataType.Date)]
-        public DateTime? FechaNacimiento { get; set; }
-
-        [Display(Name = "Dirección")]
-        public string Direccion { get; set; }
+        public string Rol { get; set; }
 
         [Display(Name = "Cédula")]
         public string Cedula { get; set; }
@@ -47,19 +40,37 @@ namespace SistemaPermisos.Models
         [Display(Name = "Puesto")]
         public string Puesto { get; set; }
 
+        [Display(Name = "Teléfono")]
+        public string Telefono { get; set; }
+
+        [Display(Name = "Departamento")]
+        public string Departamento { get; set; }
+
+        [Display(Name = "Dirección")]
+        public string Direccion { get; set; }
+
+        [Display(Name = "Fecha de Nacimiento")]
+        [DataType(DataType.Date)]
+        public DateTime? FechaNacimiento { get; set; }
+
+        [Display(Name = "Foto de Perfil")]
+        public string FotoPerfil { get; set; }
+
         [Display(Name = "Fecha de Registro")]
+        [DataType(DataType.DateTime)]
         public DateTime FechaRegistro { get; set; } = DateTime.Now;
 
         [Display(Name = "Última Actualización")]
+        [DataType(DataType.DateTime)]
         public DateTime UltimaActualizacion { get; set; } = DateTime.Now;
 
-        // Agregar esta propiedad al modelo Usuario
-        [Display(Name = "Estado")]
+        [Display(Name = "Activo")]
         public bool Activo { get; set; } = true;
 
         // Relaciones
-        public virtual ICollection<Permiso> Permisos { get; set; } = new List<Permiso>();
-        public virtual ICollection<OmisionMarca> OmisionesMarca { get; set; } = new List<OmisionMarca>();
-        public virtual ICollection<ReporteDano> ReportesDanos { get; set; } = new List<ReporteDano>();
+        public virtual ICollection<Permiso> Permisos { get; set; }
+        public virtual ICollection<OmisionMarca> OmisionesMarca { get; set; }
+        public virtual ICollection<ReporteDano> ReportesDanos { get; set; }
+        public virtual ICollection<UserPermission> UserPermissions { get; set; }
     }
 }

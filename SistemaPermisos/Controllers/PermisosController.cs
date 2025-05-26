@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Hosting;
 using SistemaPermisos.Data;
 using SistemaPermisos.Models;
 using SistemaPermisos.ViewModels;
@@ -123,66 +124,79 @@ namespace SistemaPermisos.Controllers
 
             if (ModelState.IsValid)
             {
-                // Procesar la imagen del comprobante
-                string rutaComprobante = null;
-                if (model.Comprobante != null)
+                try
                 {
-                    string uploadsFolder = Path.Combine(_hostEnvironment.WebRootPath, "uploads", "comprobantes");
-                    string uniqueFileName = Guid.NewGuid().ToString() + "_" + model.Comprobante.FileName;
-                    string filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                    // Asegurar que el directorio existe
-                    Directory.CreateDirectory(uploadsFolder);
-
-                    using (var fileStream = new FileStream(filePath, FileMode.Create))
+                    // Procesar la imagen del comprobante
+                    string rutaComprobante = null;
+                    if (model.Comprobante != null)
                     {
-                        await model.Comprobante.CopyToAsync(fileStream);
+                        string uploadsFolder = Path.Combine(_hostEnvironment.WebRootPath, "uploads", "comprobantes");
+                        string uniqueFileName = Guid.NewGuid().ToString() + "_" + model.Comprobante.FileName;
+                        string filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+                        // Asegurar que el directorio existe
+                        Directory.CreateDirectory(uploadsFolder);
+
+                        using (var fileStream = new FileStream(filePath, FileMode.Create))
+                        {
+                            await model.Comprobante.CopyToAsync(fileStream);
+                        }
+
+                        rutaComprobante = "/uploads/comprobantes/" + uniqueFileName;
                     }
 
-                    rutaComprobante = "/uploads/comprobantes/" + uniqueFileName;
+                    var permiso = new Permiso
+                    {
+                        UsuarioId = usuarioId.Value,
+                        Fecha = model.Fecha,
+                        HoraDesde = !string.IsNullOrEmpty(model.HoraDesde) ? TimeSpan.Parse(model.HoraDesde) : null,
+                        HoraHasta = !string.IsNullOrEmpty(model.HoraHasta) ? TimeSpan.Parse(model.HoraHasta) : null,
+                        JornadaCompleta = model.JornadaCompleta,
+                        MediaJornada = model.MediaJornada,
+                        CantidadLecciones = model.CantidadLecciones,
+                        Cedula = model.Cedula,
+                        Puesto = model.Puesto,
+                        Condicion = model.Condicion,
+                        TipoMotivo = model.TipoMotivo,
+                        TipoConvocatoria = model.TipoConvocatoria,
+                        Motivo = model.TipoMotivo == "Asuntos personales" ? model.Motivo : model.TipoMotivo,
+                        Observaciones = model.Observaciones,
+                        HoraSalida = !string.IsNullOrEmpty(model.HoraSalida) ? TimeSpan.Parse(model.HoraSalida) : null,
+                        RutaComprobante = rutaComprobante,
+                        Estado = "Pendiente",
+                        FechaSolicitud = DateTime.Now,
+                        RutaJustificacion = null
+                    };
+
+                    // Actualizar información del usuario si es necesario
+                    var usuario = await _context.Usuarios.FindAsync(usuarioId);
+                    if (usuario != null)
+                    {
+                        if (string.IsNullOrEmpty(usuario.Cedula))
+                        {
+                            usuario.Cedula = model.Cedula;
+                        }
+                        if (string.IsNullOrEmpty(usuario.Puesto))
+                        {
+                            usuario.Puesto = model.Puesto;
+                        }
+                        _context.Update(usuario);
+                    }
+
+                    _context.Add(permiso);
+                    await _context.SaveChangesAsync();
+                    return RedirectToAction(nameof(Index));
                 }
-
-                var permiso = new Permiso
+                catch (FormatException ex)
                 {
-                    UsuarioId = usuarioId.Value,
-                    Fecha = model.Fecha,
-                    HoraDesde = model.HoraDesde,
-                    HoraHasta = model.HoraHasta,
-                    JornadaCompleta = model.JornadaCompleta,
-                    MediaJornada = model.MediaJornada,
-                    CantidadLecciones = model.CantidadLecciones,
-                    Cedula = model.Cedula,
-                    Puesto = model.Puesto,
-                    Condicion = model.Condicion,
-                    TipoMotivo = model.TipoMotivo,
-                    TipoConvocatoria = model.TipoConvocatoria,
-                    Motivo = model.TipoMotivo == "Asuntos personales" ? model.Motivo : model.TipoMotivo,
-                    Observaciones = model.Observaciones,
-                    HoraSalida = model.HoraSalida,
-                    RutaComprobante = rutaComprobante,
-                    Estado = "Pendiente",
-                    FechaSolicitud = DateTime.Now,
-                    RutaJustificacion = null
-                };
-
-                // Actualizar información del usuario si es necesario
-                var usuario = await _context.Usuarios.FindAsync(usuarioId);
-                if (usuario != null)
-                {
-                    if (string.IsNullOrEmpty(usuario.Cedula))
-                    {
-                        usuario.Cedula = model.Cedula;
-                    }
-                    if (string.IsNullOrEmpty(usuario.Puesto))
-                    {
-                        usuario.Puesto = model.Puesto;
-                    }
-                    _context.Update(usuario);
+                    // Manejar errores de formato en la conversión de TimeSpan
+                    ModelState.AddModelError("", "Formato de hora inválido. Use el formato HH:MM.");
                 }
-
-                _context.Add(permiso);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                catch (Exception ex)
+                {
+                    // Manejar otras excepciones
+                    ModelState.AddModelError("", "Ocurrió un error al procesar la solicitud: " + ex.Message);
+                }
             }
 
             return View(model);
@@ -402,4 +416,3 @@ namespace SistemaPermisos.Controllers
         }
     }
 }
-

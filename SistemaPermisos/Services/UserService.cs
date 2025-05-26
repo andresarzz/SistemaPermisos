@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using SistemaPermisos.Data;
 using SistemaPermisos.Models;
+using SistemaPermisos.Repositories;
 using SistemaPermisos.ViewModels;
 using System;
 using System.Collections.Generic;
@@ -14,441 +15,398 @@ namespace SistemaPermisos.Services
 {
     public class UserService : IUserService
     {
-        private readonly ApplicationDbContext _context;
-        private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly IAuditService _auditService;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public UserService(
-            ApplicationDbContext context,
-            IHttpContextAccessor httpContextAccessor,
-            IAuditService auditService)
+        public UserService(IUnitOfWork unitOfWork, IAuditService auditService, IHttpContextAccessor httpContextAccessor)
         {
-            _context = context ?? throw new ArgumentNullException(nameof(context));
-            _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
-            _auditService = auditService ?? throw new ArgumentNullException(nameof(auditService));
+            _unitOfWork = unitOfWork;
+            _auditService = auditService;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         public async Task<IEnumerable<Usuario>> GetAllUsersAsync()
         {
-            return await _context.Usuarios.ToListAsync();
+            return await _unitOfWork.UsuarioRepository.GetAllAsync();
         }
 
         public async Task<Usuario> GetByIdAsync(int id)
         {
-            return await _context.Usuarios.FindAsync(id);
+            return await _unitOfWork.UsuarioRepository.GetByIdAsync(id);
         }
 
-        public async Task<bool> GetUserByIdAsync(int id, out Usuario usuario)
+        public async Task<Usuario> GetUserByIdAsync(int id)
         {
-            usuario = await _context.Usuarios.FindAsync(id);
-            return usuario != null;
+            return await _unitOfWork.UsuarioRepository.GetByIdAsync(id);
+        }
+
+        public async Task<(bool success, Usuario usuario)> GetUserWithResultAsync(int id)
+        {
+            var usuario = await _unitOfWork.UsuarioRepository.GetByIdAsync(id);
+            return (usuario != null, usuario);
         }
 
         public async Task<Usuario> GetByEmailAsync(string email)
         {
-            return await _context.Usuarios.FirstOrDefaultAsync(u => u.Correo == email);
+            var users = await _unitOfWork.UsuarioRepository.FindAsync(u => u.Correo == email);
+            return users.FirstOrDefault();
         }
 
-        public async Task<bool> GetUserByEmailAsync(string email, out Usuario usuario)
+        public async Task<Usuario> GetUserByEmailAsync(string email)
         {
-            usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Correo == email);
-            return usuario != null;
+            var users = await _unitOfWork.UsuarioRepository.FindAsync(u => u.Correo == email);
+            return users.FirstOrDefault();
+        }
+
+        public async Task<(bool success, Usuario usuario)> GetUserByEmailWithResultAsync(string email)
+        {
+            var users = await _unitOfWork.UsuarioRepository.FindAsync(u => u.Correo == email);
+            var usuario = users.FirstOrDefault();
+            return (usuario != null, usuario);
         }
 
         public async Task<IEnumerable<Usuario>> FindAsync(Func<Usuario, bool> predicate)
         {
-            return _context.Usuarios.Where(predicate).ToList();
+            return await _unitOfWork.UsuarioRepository.FindAsync(predicate);
         }
 
         public async Task<bool> CreateAsync(Usuario usuario)
         {
-            try
-            {
-                // Verificar si ya existe un usuario con el mismo correo
-                if (await _context.Usuarios.AnyAsync(u => u.Correo == usuario.Correo))
-                {
-                    return false;
-                }
+            if (usuario == null)
+                throw new ArgumentNullException(nameof(usuario));
 
-                // Hashear la contraseña
-                usuario.Password = HashPassword(usuario.Password);
-                usuario.FechaRegistro = DateTime.Now;
-                usuario.UltimaActualizacion = DateTime.Now;
-                usuario.Activo = true;
+            if (string.IsNullOrEmpty(usuario.Password))
+                throw new ArgumentException("La contraseña no puede estar vacía", nameof(usuario.Password));
 
-                _context.Usuarios.Add(usuario);
-                await _context.SaveChangesAsync();
-
-                await _auditService.LogActivityAsync(null, "Crear", "Usuario", usuario.Id, null, $"Usuario creado: {usuario.Nombre}");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                // Registrar la excepción
-                System.Diagnostics.Debug.WriteLine($"Error al crear usuario: {ex.Message}");
+            // Verificar si el correo ya existe
+            if (await IsEmailUniqueAsync(usuario.Correo) == false)
                 return false;
-            }
+
+            // Hashear la contraseña
+            usuario.Password = HashPassword(usuario.Password);
+            usuario.FechaRegistro = DateTime.Now;
+            usuario.UltimaActualizacion = DateTime.Now;
+
+            await _unitOfWork.UsuarioRepository.AddAsync(usuario);
+            await _unitOfWork.SaveChangesAsync();
+
+            // Registrar en auditoría
+            await _auditService.LogActionAsync("Crear", "Usuario", usuario.Id, null, Newtonsoft.Json.JsonConvert.SerializeObject(usuario));
+
+            return true;
         }
 
         public async Task<bool> CreateUserAsync(UserCreateViewModel model)
         {
-            try
+            var user = new Usuario
             {
-                // Verificar si el correo ya existe
-                if (await _context.Usuarios.AnyAsync(u => u.Correo == model.Correo))
-                {
-                    return false;
-                }
+                Nombre = model.Nombre,
+                Correo = model.Correo,
+                Rol = model.Rol,
+                Cedula = model.Cedula,
+                Puesto = model.Puesto,
+                Telefono = model.Telefono,
+                Departamento = model.Departamento,
+                FechaRegistro = DateTime.Now,
+                UltimaActualizacion = DateTime.Now,
+                Activo = true
+            };
 
-                var usuario = new Usuario
-                {
-                    Nombre = model.Nombre,
-                    Correo = model.Correo,
-                    Password = HashPassword(model.Password),
-                    Rol = model.Rol,
-                    Cedula = model.Cedula,
-                    Puesto = model.Puesto,
-                    Telefono = model.Telefono,
-                    Departamento = model.Departamento,
-                    FechaRegistro = DateTime.Now,
-                    UltimaActualizacion = DateTime.Now,
-                    Activo = true
-                };
+            return await CreateUserAsync(user, model.Password);
+        }
 
-                _context.Usuarios.Add(usuario);
-                await _context.SaveChangesAsync();
+        public async Task<bool> CreateUserAsync(Usuario user, string password)
+        {
+            if (user == null)
+                throw new ArgumentNullException(nameof(user));
 
-                // Registrar en auditoría
-                await _auditService.LogActivityAsync(null, "Crear", "Usuario", usuario.Id, null, $"Nuevo usuario: {usuario.Nombre} ({usuario.Correo})");
+            if (string.IsNullOrEmpty(password))
+                throw new ArgumentException("La contraseña no puede estar vacía", nameof(password));
 
-                return true;
-            }
-            catch (Exception ex)
-            {
-                // Registrar la excepción
-                System.Diagnostics.Debug.WriteLine($"Error al crear usuario: {ex.Message}");
+            // Verificar si el correo ya existe
+            if (await IsEmailUniqueAsync(user.Correo) == false)
                 return false;
-            }
+
+            // Hashear la contraseña
+            user.Password = HashPassword(password);
+            user.FechaRegistro = DateTime.Now;
+            user.UltimaActualizacion = DateTime.Now;
+
+            await _unitOfWork.UsuarioRepository.AddAsync(user);
+            await _unitOfWork.SaveChangesAsync();
+
+            // Registrar en auditoría
+            await _auditService.LogActionAsync("Crear", "Usuario", user.Id, null, Newtonsoft.Json.JsonConvert.SerializeObject(user));
+
+            return true;
         }
 
         public async Task<bool> UpdateAsync(Usuario usuario)
         {
-            try
-            {
-                var existingUser = await _context.Usuarios.FindAsync(usuario.Id);
-                if (existingUser == null)
-                {
-                    return false;
-                }
+            if (usuario == null)
+                throw new ArgumentNullException(nameof(usuario));
 
-                // Actualizar propiedades
-                existingUser.Nombre = usuario.Nombre;
-                existingUser.Telefono = usuario.Telefono;
-                existingUser.Departamento = usuario.Departamento;
-                existingUser.FechaNacimiento = usuario.FechaNacimiento;
-                existingUser.Direccion = usuario.Direccion;
-                existingUser.Cedula = usuario.Cedula;
-                existingUser.Puesto = usuario.Puesto;
-                existingUser.UltimaActualizacion = DateTime.Now;
-
-                // Si se proporciona una nueva foto de perfil, actualizarla
-                if (!string.IsNullOrEmpty(usuario.FotoPerfil))
-                {
-                    existingUser.FotoPerfil = usuario.FotoPerfil;
-                }
-
-                await _context.SaveChangesAsync();
-                await _auditService.LogActivityAsync(null, "Actualizar", "Usuario", usuario.Id, null, $"Usuario actualizado: {usuario.Nombre}");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                // Registrar la excepción
-                System.Diagnostics.Debug.WriteLine($"Error al actualizar usuario: {ex.Message}");
+            // Obtener usuario actual para comparar
+            var currentUser = await _unitOfWork.UsuarioRepository.GetByIdAsync(usuario.Id);
+            if (currentUser == null)
                 return false;
-            }
+
+            // Verificar si el correo ya existe (si ha cambiado)
+            if (currentUser.Correo != usuario.Correo && await IsEmailUniqueAsync(usuario.Correo, usuario.Id) == false)
+                return false;
+
+            // Guardar datos antiguos para auditoría
+            var oldData = Newtonsoft.Json.JsonConvert.SerializeObject(currentUser);
+
+            // Actualizar propiedades
+            currentUser.Nombre = usuario.Nombre;
+            currentUser.Telefono = usuario.Telefono;
+            currentUser.Departamento = usuario.Departamento;
+            currentUser.FechaNacimiento = usuario.FechaNacimiento;
+            currentUser.Direccion = usuario.Direccion;
+            currentUser.Cedula = usuario.Cedula;
+            currentUser.Puesto = usuario.Puesto;
+            currentUser.UltimaActualizacion = DateTime.Now;
+            currentUser.FotoPerfil = usuario.FotoPerfil;
+
+            // No actualizar contraseña ni rol aquí
+
+            _unitOfWork.UsuarioRepository.Update(currentUser);
+            await _unitOfWork.SaveChangesAsync();
+
+            // Registrar en auditoría
+            await _auditService.LogActionAsync("Actualizar", "Usuario", usuario.Id, oldData, Newtonsoft.Json.JsonConvert.SerializeObject(currentUser));
+
+            return true;
         }
 
         public async Task<bool> UpdateUserAsync(UserEditViewModel model)
         {
-            try
-            {
-                var usuario = await _context.Usuarios.FindAsync(model.Id);
-                if (usuario == null)
-                {
-                    return false;
-                }
-
-                // Verificar si el correo ya existe en otro usuario
-                if (usuario.Correo != model.Correo &&
-                    await _context.Usuarios.AnyAsync(u => u.Correo == model.Correo))
-                {
-                    return false;
-                }
-
-                // Guardar datos antiguos para auditoría
-                string datosAntiguos = $"Nombre: {usuario.Nombre}, Correo: {usuario.Correo}, Rol: {usuario.Rol}";
-
-                usuario.Nombre = model.Nombre;
-                usuario.Correo = model.Correo;
-                usuario.Rol = model.Rol;
-                usuario.Cedula = model.Cedula;
-                usuario.Puesto = model.Puesto;
-                usuario.Telefono = model.Telefono;
-                usuario.Departamento = model.Departamento;
-                usuario.Direccion = model.Direccion;
-                usuario.UltimaActualizacion = DateTime.Now;
-
-                // Si se proporciona una nueva contraseña, actualizarla
-                if (!string.IsNullOrEmpty(model.NewPassword))
-                {
-                    usuario.Password = HashPassword(model.NewPassword);
-                }
-
-                await _context.SaveChangesAsync();
-
-                // Registrar en auditoría
-                string datosNuevos = $"Nombre: {usuario.Nombre}, Correo: {usuario.Correo}, Rol: {usuario.Rol}";
-                await _auditService.LogActivityAsync(null, "Actualizar", "Usuario", usuario.Id, datosAntiguos, datosNuevos);
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                // Registrar la excepción
-                System.Diagnostics.Debug.WriteLine($"Error al actualizar usuario: {ex.Message}");
+            var user = await _unitOfWork.UsuarioRepository.GetByIdAsync(model.Id);
+            if (user == null)
                 return false;
+
+            // Verificar si el correo ya existe (si ha cambiado)
+            if (user.Correo != model.Correo && await IsEmailUniqueAsync(model.Correo, user.Id) == false)
+                return false;
+
+            // Guardar datos antiguos para auditoría
+            var oldData = Newtonsoft.Json.JsonConvert.SerializeObject(user);
+
+            // Actualizar propiedades
+            user.Nombre = model.Nombre;
+            user.Correo = model.Correo;
+            user.Cedula = model.Cedula;
+            user.Puesto = model.Puesto;
+            user.Telefono = model.Telefono;
+            user.Departamento = model.Departamento;
+            user.Direccion = model.Direccion;
+            user.FechaNacimiento = model.FechaNacimiento;
+            user.UltimaActualizacion = DateTime.Now;
+            user.Rol = model.Rol;
+
+            if (!string.IsNullOrEmpty(model.NewPassword))
+            {
+                user.Password = HashPassword(model.NewPassword);
             }
+
+            _unitOfWork.UsuarioRepository.Update(user);
+            await _unitOfWork.SaveChangesAsync();
+
+            // Registrar en auditoría
+            await _auditService.LogActionAsync("Actualizar", "Usuario", user.Id, oldData, Newtonsoft.Json.JsonConvert.SerializeObject(user));
+
+            return true;
         }
 
         public async Task<bool> DeleteAsync(int id)
         {
-            try
-            {
-                var usuario = await _context.Usuarios.FindAsync(id);
-                if (usuario == null)
-                {
-                    return false;
-                }
-
-                _context.Usuarios.Remove(usuario);
-                await _context.SaveChangesAsync();
-                await _auditService.LogActivityAsync(null, "Eliminar", "Usuario", id, $"Usuario eliminado: {usuario.Nombre}", null);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                // Registrar la excepción
-                System.Diagnostics.Debug.WriteLine($"Error al eliminar usuario: {ex.Message}");
+            var user = await _unitOfWork.UsuarioRepository.GetByIdAsync(id);
+            if (user == null)
                 return false;
-            }
+
+            // Guardar datos para auditoría
+            var oldData = Newtonsoft.Json.JsonConvert.SerializeObject(user);
+
+            _unitOfWork.UsuarioRepository.Remove(user);
+            await _unitOfWork.SaveChangesAsync();
+
+            // Registrar en auditoría
+            await _auditService.LogActionAsync("Eliminar", "Usuario", id, oldData, null);
+
+            return true;
         }
 
         public async Task<bool> DeleteUserAsync(int id)
         {
-            try
-            {
-                var usuario = await _context.Usuarios.FindAsync(id);
-                if (usuario == null)
-                {
-                    return false;
-                }
-
-                // Verificar si el usuario tiene registros asociados
-                bool tienePermisos = await _context.Permisos.AnyAsync(p => p.UsuarioId == id);
-                bool tieneOmisiones = await _context.OmisionesMarca.AnyAsync(o => o.UsuarioId == id);
-                bool tieneReportes = await _context.ReportesDanos.AnyAsync(r => r.UsuarioId == id);
-
-                if (tienePermisos || tieneOmisiones || tieneReportes)
-                {
-                    return false;
-                }
-
-                _context.Usuarios.Remove(usuario);
-                await _context.SaveChangesAsync();
-
-                // Registrar en auditoría
-                await _auditService.LogActivityAsync(null, "Eliminar", "Usuario", id, $"Usuario eliminado: {usuario.Nombre} ({usuario.Correo})", null);
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                // Registrar la excepción
-                System.Diagnostics.Debug.WriteLine($"Error al eliminar usuario: {ex.Message}");
+            var user = await _unitOfWork.UsuarioRepository.GetByIdAsync(id);
+            if (user == null)
                 return false;
-            }
+
+            // Guardar datos para auditoría
+            var oldData = Newtonsoft.Json.JsonConvert.SerializeObject(user);
+
+            _unitOfWork.UsuarioRepository.Remove(user);
+            await _unitOfWork.SaveChangesAsync();
+
+            // Registrar en auditoría
+            await _auditService.LogActionAsync("Eliminar", "Usuario", id, oldData, null);
+
+            return true;
         }
 
         public async Task<bool> ChangeRoleAsync(int userId, string newRole)
         {
-            try
-            {
-                var usuario = await _context.Usuarios.FindAsync(userId);
-                if (usuario == null)
-                {
-                    return false;
-                }
-
-                string rolAnterior = usuario.Rol;
-                usuario.Rol = newRole;
-                usuario.UltimaActualizacion = DateTime.Now;
-
-                await _context.SaveChangesAsync();
-                await _auditService.LogActivityAsync(null, "Cambiar Rol", "Usuario", userId, $"Rol anterior: {rolAnterior}", $"Nuevo rol: {newRole}");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                // Registrar la excepción
-                System.Diagnostics.Debug.WriteLine($"Error al cambiar rol: {ex.Message}");
+            var user = await _unitOfWork.UsuarioRepository.GetByIdAsync(userId);
+            if (user == null)
                 return false;
-            }
+
+            // Guardar datos antiguos para auditoría
+            var oldData = Newtonsoft.Json.JsonConvert.SerializeObject(user);
+
+            // Actualizar rol
+            user.Rol = newRole;
+            user.UltimaActualizacion = DateTime.Now;
+
+            _unitOfWork.UsuarioRepository.Update(user);
+            await _unitOfWork.SaveChangesAsync();
+
+            // Registrar en auditoría
+            await _auditService.LogActionAsync("Cambiar Rol", "Usuario", userId, oldData, Newtonsoft.Json.JsonConvert.SerializeObject(user));
+
+            return true;
         }
 
         public async Task<bool> ChangeUserRoleAsync(ChangeRoleViewModel model)
         {
-            try
-            {
-                var usuario = await _context.Usuarios.FindAsync(model.UsuarioId);
-                if (usuario == null)
-                {
-                    return false;
-                }
-
-                string rolAnterior = usuario.Rol;
-                usuario.Rol = model.NuevoRol;
-                usuario.UltimaActualizacion = DateTime.Now;
-
-                await _context.SaveChangesAsync();
-
-                // Registrar en auditoría
-                await _auditService.LogActivityAsync(null, "Cambiar Rol", "Usuario", usuario.Id,
-                    $"Rol anterior: {rolAnterior}", $"Nuevo rol: {usuario.Rol}");
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                // Registrar la excepción
-                System.Diagnostics.Debug.WriteLine($"Error al cambiar rol: {ex.Message}");
+            var user = await _unitOfWork.UsuarioRepository.GetByIdAsync(model.UsuarioId);
+            if (user == null)
                 return false;
-            }
+
+            // Guardar datos antiguos para auditoría
+            var oldData = Newtonsoft.Json.JsonConvert.SerializeObject(user);
+
+            // Actualizar rol
+            user.Rol = model.NuevoRol;
+            user.UltimaActualizacion = DateTime.Now;
+
+            _unitOfWork.UsuarioRepository.Update(user);
+            await _unitOfWork.SaveChangesAsync();
+
+            // Registrar en auditoría
+            await _auditService.LogActionAsync("Cambiar Rol", "Usuario", user.Id, oldData, Newtonsoft.Json.JsonConvert.SerializeObject(user));
+
+            return true;
         }
 
         public async Task<bool> ToggleActiveStatusAsync(int userId)
         {
-            try
-            {
-                var usuario = await _context.Usuarios.FindAsync(userId);
-                if (usuario == null)
-                {
-                    return false;
-                }
-
-                usuario.Activo = !usuario.Activo;
-                usuario.UltimaActualizacion = DateTime.Now;
-
-                await _context.SaveChangesAsync();
-                string action = usuario.Activo ? "Activar" : "Desactivar";
-                await _auditService.LogActivityAsync(null, action, "Usuario", userId, $"Estado anterior: {!usuario.Activo}", $"Nuevo estado: {usuario.Activo}");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                // Registrar la excepción
-                System.Diagnostics.Debug.WriteLine($"Error al cambiar estado activo: {ex.Message}");
+            var user = await _unitOfWork.UsuarioRepository.GetByIdAsync(userId);
+            if (user == null)
                 return false;
-            }
+
+            // Guardar datos antiguos para auditoría
+            var oldData = Newtonsoft.Json.JsonConvert.SerializeObject(user);
+
+            // Activar/Desactivar usuario
+            user.Activo = !user.Activo;
+            user.UltimaActualizacion = DateTime.Now;
+
+            _unitOfWork.UsuarioRepository.Update(user);
+            await _unitOfWork.SaveChangesAsync();
+
+            // Registrar en auditoría
+            await _auditService.LogActionAsync(user.Activo ? "Activar" : "Desactivar", "Usuario", userId, oldData, Newtonsoft.Json.JsonConvert.SerializeObject(user));
+
+            return true;
         }
 
         public async Task<bool> ToggleUserStatusAsync(int id)
         {
-            try
-            {
-                var usuario = await _context.Usuarios.FindAsync(id);
-                if (usuario == null)
-                {
-                    return false;
-                }
-
-                usuario.Activo = !usuario.Activo;
-                usuario.UltimaActualizacion = DateTime.Now;
-
-                await _context.SaveChangesAsync();
-
-                // Registrar en auditoría
-                string accion = usuario.Activo ? "Activar" : "Desactivar";
-                await _auditService.LogActivityAsync(null, accion, "Usuario", usuario.Id,
-                    $"Estado anterior: {!usuario.Activo}", $"Nuevo estado: {usuario.Activo}");
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                // Registrar la excepción
-                System.Diagnostics.Debug.WriteLine($"Error al cambiar estado: {ex.Message}");
+            var user = await _unitOfWork.UsuarioRepository.GetByIdAsync(id);
+            if (user == null)
                 return false;
-            }
+
+            // Guardar datos antiguos para auditoría
+            var oldData = Newtonsoft.Json.JsonConvert.SerializeObject(user);
+
+            // Activar/Desactivar usuario
+            user.Activo = !user.Activo;
+            user.UltimaActualizacion = DateTime.Now;
+
+            _unitOfWork.UsuarioRepository.Update(user);
+            await _unitOfWork.SaveChangesAsync();
+
+            // Registrar en auditoría
+            await _auditService.LogActionAsync(user.Activo ? "Activar" : "Desactivar", "Usuario", id, oldData, Newtonsoft.Json.JsonConvert.SerializeObject(user));
+
+            return true;
         }
 
         public async Task<bool> ChangePasswordAsync(int userId, string currentPassword, string newPassword)
         {
-            try
-            {
-                var usuario = await _context.Usuarios.FindAsync(userId);
-                if (usuario == null)
-                {
-                    return false;
-                }
-
-                // Verificar la contraseña actual
-                if (!VerifyPassword(currentPassword, usuario.Password))
-                {
-                    return false;
-                }
-
-                // Actualizar la contraseña
-                usuario.Password = HashPassword(newPassword);
-                usuario.UltimaActualizacion = DateTime.Now;
-
-                await _context.SaveChangesAsync();
-                await _auditService.LogActivityAsync(userId, "Cambiar Contraseña", "Usuario", userId, null, "Contraseña actualizada");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                // Registrar la excepción
-                System.Diagnostics.Debug.WriteLine($"Error al cambiar contraseña: {ex.Message}");
+            var user = await _unitOfWork.UsuarioRepository.GetByIdAsync(userId);
+            if (user == null)
                 return false;
-            }
+
+            // Verificar contraseña actual
+            if (!VerifyPassword(currentPassword, user.Password))
+                return false;
+
+            // Actualizar contraseña
+            user.Password = HashPassword(newPassword);
+            user.UltimaActualizacion = DateTime.Now;
+
+            _unitOfWork.UsuarioRepository.Update(user);
+            await _unitOfWork.SaveChangesAsync();
+
+            // Registrar en auditoría (sin incluir contraseñas en el log)
+            await _auditService.LogActionAsync("Cambiar Contraseña", "Usuario", userId, null, null);
+
+            return true;
         }
 
         public async Task<bool> ValidatePasswordAsync(int userId, string password)
         {
-            try
-            {
-                var usuario = await _context.Usuarios.FindAsync(userId);
-                if (usuario == null)
-                {
-                    return false;
-                }
-
-                return VerifyPassword(password, usuario.Password);
-            }
-            catch (Exception ex)
-            {
-                // Registrar la excepción
-                System.Diagnostics.Debug.WriteLine($"Error al validar contraseña: {ex.Message}");
+            var user = await _unitOfWork.UsuarioRepository.GetByIdAsync(userId);
+            if (user == null)
                 return false;
-            }
+
+            return VerifyPassword(password, user.Password);
+        }
+
+        public async Task<bool> ValidatePasswordAsync(string email, string password)
+        {
+            var user = await GetUserByEmailAsync(email);
+            if (user == null)
+                return false;
+
+            return VerifyPassword(password, user.Password);
+        }
+
+        public async Task<bool> IsEmailUniqueAsync(string email, int? userId = null)
+        {
+            var users = await _unitOfWork.UsuarioRepository.FindAsync(u => u.Correo == email);
+            var existingUser = users.FirstOrDefault();
+
+            // Si no existe usuario con ese correo, es único
+            if (existingUser == null)
+                return true;
+
+            // Si existe pero es el mismo usuario que estamos editando, es único
+            if (userId.HasValue && existingUser.Id == userId.Value)
+                return true;
+
+            // En otro caso, no es único
+            return false;
         }
 
         public async Task<bool> AuthenticateAsync(string email, string password)
         {
             try
             {
-                var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Correo == email);
+                var usuario = await GetUserByEmailAsync(email);
                 if (usuario == null || !usuario.Activo)
                 {
                     return false;
@@ -507,111 +465,141 @@ namespace SistemaPermisos.Services
 
         public async Task<bool> ResetPasswordAsync(int userId, string newPassword)
         {
-            try
-            {
-                var usuario = await _context.Usuarios.FindAsync(userId);
-                if (usuario == null)
-                {
-                    return false;
-                }
-
-                // Actualizar la contraseña
-                usuario.Password = HashPassword(newPassword);
-                usuario.UltimaActualizacion = DateTime.Now;
-
-                await _context.SaveChangesAsync();
-                await _auditService.LogActivityAsync(userId, "Restablecer Contraseña", "Usuario", userId, null, "Contraseña restablecida");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                // Registrar la excepción
-                System.Diagnostics.Debug.WriteLine($"Error al restablecer contraseña: {ex.Message}");
+            var user = await _unitOfWork.UsuarioRepository.GetByIdAsync(userId);
+            if (user == null)
                 return false;
-            }
+
+            // Actualizar contraseña
+            user.Password = HashPassword(newPassword);
+            user.UltimaActualizacion = DateTime.Now;
+
+            _unitOfWork.UsuarioRepository.Update(user);
+            await _unitOfWork.SaveChangesAsync();
+
+            // Registrar en auditoría
+            await _auditService.LogActionAsync("Restablecer Contraseña", "Usuario", user.Id, null, null);
+
+            return true;
+        }
+
+        public async Task<bool> ResetPasswordAsync(string email, string token, string newPassword)
+        {
+            var user = await GetUserByEmailAsync(email);
+            if (user == null)
+                return false;
+
+            // Buscar token válido
+            var passwordResets = await _unitOfWork.PasswordResetRepository.FindAsync(
+                pr => pr.UsuarioId == user.Id &&
+                      pr.Token == token &&
+                      pr.FechaExpiracion > DateTime.Now &&
+                      !pr.Utilizado);
+
+            var passwordReset = passwordResets.FirstOrDefault();
+            if (passwordReset == null)
+                return false;
+
+            // Actualizar contraseña
+            user.Password = HashPassword(newPassword);
+            user.UltimaActualizacion = DateTime.Now;
+
+            // Marcar token como utilizado
+            passwordReset.Utilizado = true;
+            passwordReset.FechaUtilizacion = DateTime.Now;
+
+            _unitOfWork.UsuarioRepository.Update(user);
+            _unitOfWork.PasswordResetRepository.Update(passwordReset);
+            await _unitOfWork.SaveChangesAsync();
+
+            // Registrar en auditoría
+            await _auditService.LogActionAsync("Restablecer Contraseña", "Usuario", user.Id, null, null);
+
+            return true;
         }
 
         public async Task<bool> CreatePasswordResetTokenAsync(string email)
         {
-            try
-            {
-                var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Correo == email);
-                if (usuario == null || !usuario.Activo)
-                {
-                    return false;
-                }
-
-                // Generar token
-                var token = GenerateRandomToken();
-                var expiration = DateTime.Now.AddHours(24);
-
-                // Guardar token en la base de datos
-                var passwordReset = new PasswordReset
-                {
-                    UsuarioId = usuario.Id,
-                    Token = token,
-                    FechaExpiracion = expiration,
-                    Utilizado = false
-                };
-
-                _context.PasswordResets.Add(passwordReset);
-                await _context.SaveChangesAsync();
-                await _auditService.LogActivityAsync(null, "Solicitar Restablecimiento", "Usuario", usuario.Id, null, "Token de restablecimiento generado");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                // Registrar la excepción
-                System.Diagnostics.Debug.WriteLine($"Error al crear token: {ex.Message}");
+            var user = await GetUserByEmailAsync(email);
+            if (user == null)
                 return false;
-            }
+
+            // Generar token único
+            var token = Guid.NewGuid().ToString("N");
+
+            // Guardar token en la base de datos
+            var passwordReset = new PasswordReset
+            {
+                UsuarioId = user.Id,
+                Token = token,
+                FechaExpiracion = DateTime.Now.AddHours(24), // Expira en 24 horas
+                Utilizado = false
+            };
+
+            await _unitOfWork.PasswordResetRepository.AddAsync(passwordReset);
+            await _unitOfWork.SaveChangesAsync();
+
+            return true;
+        }
+
+        public async Task<string> GeneratePasswordResetTokenAsync(string email)
+        {
+            var user = await GetUserByEmailAsync(email);
+            if (user == null)
+                return null;
+
+            // Generar token único
+            var token = Guid.NewGuid().ToString("N");
+
+            // Guardar token en la base de datos
+            var passwordReset = new PasswordReset
+            {
+                UsuarioId = user.Id,
+                Token = token,
+                FechaExpiracion = DateTime.Now.AddHours(24), // Expira en 24 horas
+                Utilizado = false
+            };
+
+            await _unitOfWork.PasswordResetRepository.AddAsync(passwordReset);
+            await _unitOfWork.SaveChangesAsync();
+
+            return token;
         }
 
         public async Task<bool> InitiatePasswordResetAsync(string email)
         {
-            try
+            var user = await GetUserByEmailAsync(email);
+            if (user == null)
             {
-                var usuario = await GetByEmailAsync(email);
-                if (usuario == null)
-                {
-                    return false;
-                }
-
-                // Generar token único
-                string token = GenerateRandomToken();
-
-                // Guardar token en la base de datos
-                var passwordReset = new PasswordReset
-                {
-                    UsuarioId = usuario.Id,
-                    Token = token,
-                    FechaExpiracion = DateTime.Now.AddHours(24), // Expira en 24 horas
-                    Utilizado = false
-                };
-
-                _context.PasswordResets.Add(passwordReset);
-                await _context.SaveChangesAsync();
-
-                // Registrar en auditoría
-                await _auditService.LogActivityAsync(null, "Solicitar Restablecimiento", "Usuario", usuario.Id,
-                    null, $"Token generado para {usuario.Correo}");
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                // Registrar la excepción
-                System.Diagnostics.Debug.WriteLine($"Error al iniciar restablecimiento: {ex.Message}");
                 return false;
             }
+
+            // Generar token único
+            string token = GenerateRandomToken();
+
+            // Guardar token en la base de datos
+            var passwordReset = new PasswordReset
+            {
+                UsuarioId = user.Id,
+                Token = token,
+                FechaExpiracion = DateTime.Now.AddHours(24), // Expira en 24 horas
+                Utilizado = false
+            };
+
+            _unitOfWork.PasswordResetRepository.AddAsync(passwordReset);
+            await _unitOfWork.SaveChangesAsync();
+
+            // Registrar en auditoría
+            await _auditService.LogActivityAsync(null, "Solicitar Restablecimiento", "Usuario", user.Id,
+                null, $"Token generado para {user.Correo}");
+
+            return true;
         }
 
         public async Task<(bool isValid, int userId)> ValidatePasswordResetTokenAsync(string token)
         {
             try
             {
-                var passwordReset = await _context.PasswordResets
-                    .FirstOrDefaultAsync(p => p.Token == token && !p.Utilizado && p.FechaExpiracion > DateTime.Now);
+                var passwordReset = await _unitOfWork.PasswordResetRepository.FindAsync(p => p.Token == token && !p.Utilizado && p.FechaExpiracion > DateTime.Now);
 
                 if (passwordReset == null)
                 {
@@ -633,19 +621,20 @@ namespace SistemaPermisos.Services
             try
             {
                 // Buscar el token en la base de datos
-                var passwordReset = await _context.PasswordResets
-                    .FirstOrDefaultAsync(pr =>
+                var passwordReset = await _unitOfWork.PasswordResetRepository.FindAsync(pr =>
                         pr.Token == token &&
                         pr.FechaExpiracion > DateTime.Now &&
                         !pr.Utilizado);
 
-                if (passwordReset == null)
+                var passwordResetFirst = passwordReset.FirstOrDefault();
+
+                if (passwordResetFirst == null)
                 {
                     return false;
                 }
 
                 // Cambiar la contraseña del usuario
-                var usuario = await _context.Usuarios.FindAsync(passwordReset.UsuarioId);
+                var usuario = await _unitOfWork.UsuarioRepository.GetByIdAsync(passwordResetFirst.UsuarioId);
                 if (usuario == null)
                 {
                     return false;
@@ -655,9 +644,12 @@ namespace SistemaPermisos.Services
                 usuario.UltimaActualizacion = DateTime.Now;
 
                 // Marcar el token como utilizado
-                passwordReset.Utilizado = true;
+                passwordResetFirst.Utilizado = true;
 
-                await _context.SaveChangesAsync();
+                _unitOfWork.UsuarioRepository.Update(usuario);
+                _unitOfWork.PasswordResetRepository.Update(passwordResetFirst);
+
+                await _unitOfWork.SaveChangesAsync();
 
                 // Registrar en auditoría
                 await _auditService.LogActivityAsync(usuario.Id, "Restablecer Contraseña", "Usuario", usuario.Id,
@@ -677,16 +669,17 @@ namespace SistemaPermisos.Services
         {
             try
             {
-                var passwordReset = await _context.PasswordResets
-                    .FirstOrDefaultAsync(p => p.Token == token);
+                var passwordReset = await _unitOfWork.PasswordResetRepository.FindAsync(p => p.Token == token);
+                var passwordResetFirst = passwordReset.FirstOrDefault();
 
-                if (passwordReset == null)
+                if (passwordResetFirst == null)
                 {
                     return false;
                 }
 
-                passwordReset.Utilizado = true;
-                await _context.SaveChangesAsync();
+                passwordResetFirst.Utilizado = true;
+                _unitOfWork.PasswordResetRepository.Update(passwordResetFirst);
+                await _unitOfWork.SaveChangesAsync();
                 return true;
             }
             catch (Exception ex)
@@ -701,9 +694,8 @@ namespace SistemaPermisos.Services
         {
             try
             {
-                var userPermissions = await _context.UserPermissions
-                    .AnyAsync(p => p.UsuarioId == userId && p.Permiso == permission);
-                return userPermissions;
+                var userPermissions = await _unitOfWork.UserPermissionRepository.FindAsync(p => p.UsuarioId == userId && p.PermisoId.ToString() == permission);
+                return userPermissions.Any();
             }
             catch (Exception ex)
             {
@@ -717,12 +709,9 @@ namespace SistemaPermisos.Services
         {
             try
             {
-                var userPermissions = await _context.UserPermissions
-                    .Where(p => p.UsuarioId == userId)
-                    .Select(p => p.Permiso)
-                    .ToListAsync();
+                var userPermissions = await _unitOfWork.UserPermissionRepository.FindAsync(p => p.UsuarioId == userId);
 
-                return userPermissions;
+                return userPermissions.Select(p => p.PermisoId.ToString()).ToList();
             }
             catch (Exception ex)
             {
@@ -732,18 +721,25 @@ namespace SistemaPermisos.Services
             }
         }
 
+        public async Task<IEnumerable<UserPermission>> GetUserPermissionsAsync(int userId)
+        {
+            return await _unitOfWork.UserPermissionRepository.FindAsync(p => p.UsuarioId == userId);
+        }
+
         public async Task<bool> AddPermissionAsync(int userId, string permission)
         {
             try
             {
                 // Verificar si el usuario existe
-                if (!await _context.Usuarios.AnyAsync(u => u.Id == userId))
+                var user = await _unitOfWork.UsuarioRepository.GetByIdAsync(userId);
+                if (user == null)
                 {
                     return false;
                 }
 
                 // Verificar si ya tiene el permiso
-                if (await _context.UserPermissions.AnyAsync(p => p.UsuarioId == userId && p.Permiso == permission))
+                var existingPermissions = await _unitOfWork.UserPermissionRepository.FindAsync(p => p.UsuarioId == userId && p.PermisoId.ToString() == permission);
+                if (existingPermissions.Any())
                 {
                     return true; // Ya tiene el permiso, no es necesario agregarlo
                 }
@@ -751,11 +747,11 @@ namespace SistemaPermisos.Services
                 var userPermission = new UserPermission
                 {
                     UsuarioId = userId,
-                    Permiso = permission
+                    PermisoId = int.Parse(permission)
                 };
 
-                _context.UserPermissions.Add(userPermission);
-                await _context.SaveChangesAsync();
+                await _unitOfWork.UserPermissionRepository.AddAsync(userPermission);
+                await _unitOfWork.SaveChangesAsync();
 
                 // Registrar en auditoría
                 await _auditService.LogActivityAsync(null, "Agregar Permiso", "Usuario", userId,
@@ -775,16 +771,16 @@ namespace SistemaPermisos.Services
         {
             try
             {
-                var userPermission = await _context.UserPermissions
-                    .FirstOrDefaultAsync(p => p.UsuarioId == userId && p.Permiso == permission);
+                var userPermissions = await _unitOfWork.UserPermissionRepository.FindAsync(p => p.UsuarioId == userId && p.PermisoId.ToString() == permission);
+                var userPermission = userPermissions.FirstOrDefault();
 
                 if (userPermission == null)
                 {
                     return false;
                 }
 
-                _context.UserPermissions.Remove(userPermission);
-                await _context.SaveChangesAsync();
+                _unitOfWork.UserPermissionRepository.Remove(userPermission);
+                await _unitOfWork.SaveChangesAsync();
 
                 // Registrar en auditoría
                 await _auditService.LogActivityAsync(null, "Eliminar Permiso", "Usuario", userId,
@@ -804,37 +800,38 @@ namespace SistemaPermisos.Services
         {
             try
             {
-                var usuario = await _context.Usuarios.FindAsync(userId);
+                var usuario = await _unitOfWork.UsuarioRepository.GetByIdAsync(userId);
                 if (usuario == null)
                 {
                     return false;
                 }
 
                 // Verificar si ya tiene 2FA
-                var twoFactorAuth = await _context.TwoFactorAuth
-                    .FirstOrDefaultAsync(t => t.UsuarioId == userId);
+                var twoFactorAuth = await _unitOfWork.TwoFactorAuthRepository.FindAsync(t => t.UsuarioId == userId);
+                var twoFactorAuthFirst = twoFactorAuth.FirstOrDefault();
 
-                if (twoFactorAuth == null)
+                if (twoFactorAuthFirst == null)
                 {
                     // Crear nuevo registro de 2FA
-                    twoFactorAuth = new TwoFactorAuth
+                    twoFactorAuthFirst = new TwoFactorAuth
                     {
                         UsuarioId = userId,
                         Habilitado = true,
                         ClaveSecreta = GenerateSecretKey(),
                         FechaActualizacion = DateTime.Now
                     };
-                    _context.TwoFactorAuth.Add(twoFactorAuth);
+                    await _unitOfWork.TwoFactorAuthRepository.AddAsync(twoFactorAuthFirst);
                 }
                 else
                 {
                     // Actualizar registro existente
-                    twoFactorAuth.Habilitado = true;
-                    twoFactorAuth.ClaveSecreta = GenerateSecretKey();
-                    twoFactorAuth.FechaActualizacion = DateTime.Now;
+                    twoFactorAuthFirst.Habilitado = true;
+                    twoFactorAuthFirst.ClaveSecreta = GenerateSecretKey();
+                    twoFactorAuthFirst.FechaActualizacion = DateTime.Now;
+                    _unitOfWork.TwoFactorAuthRepository.Update(twoFactorAuthFirst);
                 }
 
-                await _context.SaveChangesAsync();
+                await _unitOfWork.SaveChangesAsync();
 
                 // Registrar en auditoría
                 await _auditService.LogActivityAsync(userId, "Habilitar 2FA", "Usuario", userId,
@@ -854,18 +851,19 @@ namespace SistemaPermisos.Services
         {
             try
             {
-                var twoFactorAuth = await _context.TwoFactorAuth
-                    .FirstOrDefaultAsync(t => t.UsuarioId == userId);
+                var twoFactorAuth = await _unitOfWork.TwoFactorAuthRepository.FindAsync(t => t.UsuarioId == userId);
+                var twoFactorAuthFirst = twoFactorAuth.FirstOrDefault();
 
-                if (twoFactorAuth == null || !twoFactorAuth.Habilitado)
+                if (twoFactorAuthFirst == null || !twoFactorAuthFirst.Habilitado)
                 {
                     return false;
                 }
 
-                twoFactorAuth.Habilitado = false;
-                twoFactorAuth.FechaActualizacion = DateTime.Now;
+                twoFactorAuthFirst.Habilitado = false;
+                twoFactorAuthFirst.FechaActualizacion = DateTime.Now;
 
-                await _context.SaveChangesAsync();
+                _unitOfWork.TwoFactorAuthRepository.Update(twoFactorAuthFirst);
+                await _unitOfWork.SaveChangesAsync();
 
                 // Registrar en auditoría
                 await _auditService.LogActivityAsync(userId, "Deshabilitar 2FA", "Usuario", userId,
@@ -885,10 +883,10 @@ namespace SistemaPermisos.Services
         {
             try
             {
-                var twoFactorAuth = await _context.TwoFactorAuth
-                    .FirstOrDefaultAsync(t => t.UsuarioId == userId && t.Habilitado);
+                var twoFactorAuth = await _unitOfWork.TwoFactorAuthRepository.FindAsync(t => t.UsuarioId == userId && t.Habilitado);
+                var twoFactorAuthFirst = twoFactorAuth.FirstOrDefault();
 
-                if (twoFactorAuth == null)
+                if (twoFactorAuthFirst == null)
                 {
                     return null;
                 }
@@ -897,10 +895,11 @@ namespace SistemaPermisos.Services
                 string code = GenerateRandomCode();
 
                 // Guardar código y establecer expiración (5 minutos)
-                twoFactorAuth.UltimoCodigo = code;
-                twoFactorAuth.FechaExpiracionCodigo = DateTime.Now.AddMinutes(5);
+                twoFactorAuthFirst.UltimoCodigo = code;
+                twoFactorAuthFirst.FechaExpiracionCodigo = DateTime.Now.AddMinutes(5);
 
-                await _context.SaveChangesAsync();
+                _unitOfWork.TwoFactorAuthRepository.Update(twoFactorAuthFirst);
+                await _unitOfWork.SaveChangesAsync();
 
                 return code;
             }
@@ -916,23 +915,25 @@ namespace SistemaPermisos.Services
         {
             try
             {
-                var twoFactorAuth = await _context.TwoFactorAuth
-                    .FirstOrDefaultAsync(t =>
+                var twoFactorAuth = await _unitOfWork.TwoFactorAuthRepository.FindAsync(t =>
                         t.UsuarioId == userId &&
                         t.Habilitado &&
                         t.UltimoCodigo == code &&
                         t.FechaExpiracionCodigo > DateTime.Now);
 
-                if (twoFactorAuth == null)
+                var twoFactorAuthFirst = twoFactorAuth.FirstOrDefault();
+
+                if (twoFactorAuthFirst == null)
                 {
                     return false;
                 }
 
                 // Invalidar el código después de usarlo
-                twoFactorAuth.UltimoCodigo = null;
-                twoFactorAuth.FechaExpiracionCodigo = null;
+                twoFactorAuthFirst.UltimoCodigo = null;
+                twoFactorAuthFirst.FechaExpiracionCodigo = null;
 
-                await _context.SaveChangesAsync();
+                _unitOfWork.TwoFactorAuthRepository.Update(twoFactorAuthFirst);
+                await _unitOfWork.SaveChangesAsync();
 
                 // Registrar en auditoría
                 await _auditService.LogActivityAsync(userId, "Verificar 2FA", "Usuario", userId,
@@ -948,10 +949,83 @@ namespace SistemaPermisos.Services
             }
         }
 
+        public async Task<bool> DeactivateUserAsync(int id)
+        {
+            var user = await _unitOfWork.UsuarioRepository.GetByIdAsync(id);
+            if (user == null)
+                return false;
+
+            // Guardar datos antiguos para auditoría
+            var oldData = Newtonsoft.Json.JsonConvert.SerializeObject(user);
+
+            // Desactivar usuario
+            user.Activo = false;
+            user.UltimaActualizacion = DateTime.Now;
+
+            _unitOfWork.UsuarioRepository.Update(user);
+            await _unitOfWork.SaveChangesAsync();
+
+            // Registrar en auditoría
+            await _auditService.LogActionAsync("Desactivar", "Usuario", id, oldData, Newtonsoft.Json.JsonConvert.SerializeObject(user));
+
+            return true;
+        }
+
+        public async Task<bool> ActivateUserAsync(int id)
+        {
+            var user = await _unitOfWork.UsuarioRepository.GetByIdAsync(id);
+            if (user == null)
+                return false;
+
+            // Guardar datos antiguos para auditoría
+            var oldData = Newtonsoft.Json.JsonConvert.SerializeObject(user);
+
+            // Activar usuario
+            user.Activo = true;
+            user.UltimaActualizacion = DateTime.Now;
+
+            _unitOfWork.UsuarioRepository.Update(user);
+            await _unitOfWork.SaveChangesAsync();
+
+            // Registrar en auditoría
+            await _auditService.LogActionAsync("Activar", "Usuario", id, oldData, Newtonsoft.Json.JsonConvert.SerializeObject(user));
+
+            return true;
+        }
+
+        public async Task<string> GetUserFotoPerfilAsync(int id)
+        {
+            var user = await _unitOfWork.UsuarioRepository.GetByIdAsync(id);
+            return user?.FotoPerfil;
+        }
+
+        public async Task<bool> UpdateUserFotoPerfilAsync(int id, string fotoPerfil)
+        {
+            var user = await _unitOfWork.UsuarioRepository.GetByIdAsync(id);
+            if (user == null)
+                return false;
+
+            // Guardar datos antiguos para auditoría
+            var oldData = Newtonsoft.Json.JsonConvert.SerializeObject(user);
+
+            // Actualizar foto de perfil
+            user.FotoPerfil = fotoPerfil;
+            user.UltimaActualizacion = DateTime.Now;
+
+            _unitOfWork.UsuarioRepository.Update(user);
+            await _unitOfWork.SaveChangesAsync();
+
+            // Registrar en auditoría
+            await _auditService.LogActionAsync("Actualizar Foto de Perfil", "Usuario", id, oldData, Newtonsoft.Json.JsonConvert.SerializeObject(user));
+
+            return true;
+        }
+
         #region Helper Methods
+
         private string HashPassword(string password)
         {
-            // Usar BCrypt para hashear la contraseña
+            // Usar BCrypt para hashear contraseñas
             return BCrypt.Net.BCrypt.HashPassword(password, BCrypt.Net.BCrypt.GenerateSalt(12));
         }
 

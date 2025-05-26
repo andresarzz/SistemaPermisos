@@ -136,7 +136,7 @@ namespace SistemaPermisos.Controllers
             await _auditService.LogActivityAsync(
                 HttpContext.Session.GetInt32("UsuarioId"),
                 "Ver Detalles",
-                "Usuarios",
+                "Usuario",
                 id
             );
 

@@ -8,6 +8,8 @@ using Microsoft.EntityFrameworkCore;
 using SistemaPermisos.Data;
 using SistemaPermisos.Models;
 using SistemaPermisos.ViewModels;
+using Microsoft.AspNetCore.Hosting;
+using SistemaPermisos.Services;
 
 namespace SistemaPermisos.Controllers
 {
@@ -15,11 +17,16 @@ namespace SistemaPermisos.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _hostEnvironment;
+        private readonly IAuditService _auditService;
 
-        public ReportesController(ApplicationDbContext context, IWebHostEnvironment hostEnvironment)
+        public ReportesController(
+            ApplicationDbContext context,
+            IWebHostEnvironment hostEnvironment,
+            IAuditService auditService)
         {
             _context = context;
             _hostEnvironment = hostEnvironment;
+            _auditService = auditService;
         }
 
         // GET: Reportes
@@ -132,6 +139,7 @@ namespace SistemaPermisos.Controllers
                 var reporte = new ReporteDano
                 {
                     UsuarioId = usuarioId.Value,
+                    Equipo = model.Equipo,
                     Ubicacion = model.Ubicacion,
                     Descripcion = model.Descripcion,
                     RutaImagen = rutaImagen,
@@ -141,6 +149,17 @@ namespace SistemaPermisos.Controllers
 
                 _context.Add(reporte);
                 await _context.SaveChangesAsync();
+
+                // Registrar en auditoría
+                await _auditService.LogActivityAsync(
+                    usuarioId,
+                    "Crear",
+                    "ReporteDano",
+                    reporte.Id,
+                    null,
+                    $"Nuevo reporte: {reporte.Equipo} - {reporte.Ubicacion}"
+                );
+
                 return RedirectToAction(nameof(Index));
             }
 
@@ -169,10 +188,22 @@ namespace SistemaPermisos.Controllers
             }
 
             reporte.Estado = "Resuelto";
+            reporte.FechaResolucion = DateTime.Now;
+            reporte.ResueltoPor = HttpContext.Session.GetString("UsuarioNombre");
+
             await _context.SaveChangesAsync();
+
+            // Registrar en auditoría
+            await _auditService.LogActivityAsync(
+                HttpContext.Session.GetInt32("UsuarioId"),
+                "Actualizar",
+                "ReporteDano",
+                reporte.Id,
+                $"Estado anterior: Pendiente",
+                $"Nuevo estado: Resuelto"
+            );
 
             return RedirectToAction(nameof(Index));
         }
     }
 }
-

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SistemaPermisos.Models
 {
@@ -11,23 +12,22 @@ namespace SistemaPermisos.Models
         public int UsuarioId { get; set; }
 
         [Required]
-        [Display(Name = "Habilitado")]
         public bool Habilitado { get; set; } = false;
 
-        [Display(Name = "Clave Secreta")]
+        [Required]
+        [StringLength(100)]
         public string ClaveSecreta { get; set; }
 
-        [Display(Name = "Último Código")]
+        [StringLength(10)]
         public string UltimoCodigo { get; set; }
 
-        [Display(Name = "Fecha de Expiración del Código")]
         public DateTime? FechaExpiracionCodigo { get; set; }
 
-        [Display(Name = "Fecha de Actualización")]
+        [Required]
         public DateTime FechaActualizacion { get; set; } = DateTime.Now;
 
-        // Relaciones
+        // Relación con Usuario
+        [ForeignKey("UsuarioId")]
         public virtual Usuario Usuario { get; set; }
     }
 }
-

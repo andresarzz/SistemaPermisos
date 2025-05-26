@@ -5,9 +5,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using SistemaPermisos.Data;
+using SistemaPermisos.Middleware;
 using SistemaPermisos.Services;
 using System;
+using System.Threading.Tasks;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -50,6 +53,9 @@ else
     app.UseHsts();
 }
 
+// Middleware personalizado para manejo de excepciones globales
+app.UseMiddleware<ErrorHandlingMiddleware>();
+
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 
@@ -74,6 +80,37 @@ using (var scope = app.Services.CreateScope())
 
 // Usar sesión antes de la autorización
 app.UseSession();
+
+// Middleware personalizado para verificar la autenticación
+app.Use(async (context, next) =>
+{
+    var path = context.Request.Path.Value.ToLower();
+    var isAuthenticated = context.Session.GetInt32("UsuarioId") != null;
+
+    // Rutas que no requieren autenticación
+    var publicPaths = new[] {
+        "/account/login",
+        "/account/forgotpassword",
+        "/account/resetpassword",
+        "/home/error",
+        "/account/accessdenied"
+    };
+
+    // Verificar si la ruta actual es pública o si contiene archivos estáticos
+    var isPublicPath = Array.Exists(publicPaths, p => path.StartsWith(p)) ||
+                       path.StartsWith("/lib/") ||
+                       path.StartsWith("/css/") ||
+                       path.StartsWith("/js/") ||
+                       path.StartsWith("/images/");
+
+    if (!isAuthenticated && !isPublicPath)
+    {
+        context.Response.Redirect("/Account/Login");
+        return;
+    }
+
+    await next();
+});
 
 app.UseAuthorization();
 
