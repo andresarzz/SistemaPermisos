@@ -34,7 +34,8 @@ namespace SistemaPermisos.Controllers
         public IActionResult Login()
         {
             // Si ya está autenticado, redirigir al inicio
-            if (HttpContext.Session.GetInt32("UsuarioId") != null)
+            var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
+            if (usuarioId != null)
             {
                 return RedirectToAction("Index", "Home");
             }
@@ -68,14 +69,23 @@ namespace SistemaPermisos.Controllers
                         HttpContext.Session.SetString("UsuarioRol", usuario.Rol);
 
                         // Registrar en auditoría
-                        await _auditService.LogActivityAsync(
-                            usuario.Id,
-                            "Iniciar Sesión",
-                            "Usuario",
-                            usuario.Id,
-                            null,
-                            "Inicio de sesión exitoso"
-                        );
+                        try
+                        {
+                            await _auditService.LogActivityAsync(
+                                usuario.Id,
+                                "Iniciar Sesión",
+                                "Usuario",
+                                usuario.Id,
+                                null,
+                                null,
+                                "Inicio de sesión exitoso"
+                            );
+                        }
+                        catch (Exception auditEx)
+                        {
+                            // Log audit error but don't fail login
+                            System.Diagnostics.Debug.WriteLine($"Error en auditoría: {auditEx.Message}");
+                        }
 
                         return RedirectToAction("Index", "Home");
                     }
@@ -149,17 +159,32 @@ namespace SistemaPermisos.Controllers
                     await _context.SaveChangesAsync();
 
                     // Registrar en auditoría
-                    await _auditService.LogActivityAsync(
-                        usuarioId,
-                        "Crear",
-                        "Usuario",
-                        usuario.Id,
-                        null,
-                        $"Usuario creado: {usuario.Nombre} ({usuario.Correo})"
-                    );
+                    try
+                    {
+                        await _auditService.LogActivityAsync(
+                            usuarioId,
+                            "Crear",
+                            "Usuario",
+                            usuario.Id,
+                            null,
+                            null,
+                            $"Usuario creado: {usuario.Nombre} ({usuario.Correo})"
+                        );
+                    }
+                    catch (Exception auditEx)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error en auditoría: {auditEx.Message}");
+                    }
 
                     // Enviar correo de bienvenida
-                    await _emailService.SendWelcomeEmailAsync(usuario.Correo, usuario.Nombre);
+                    try
+                    {
+                        await _emailService.SendWelcomeEmailAsync(usuario.Correo, usuario.Nombre);
+                    }
+                    catch (Exception emailEx)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error enviando email: {emailEx.Message}");
+                    }
 
                     TempData["SuccessMessage"] = "Usuario registrado correctamente.";
                     return RedirectToAction("Index", "Users");
@@ -186,14 +211,22 @@ namespace SistemaPermisos.Controllers
                 if (usuarioId.HasValue)
                 {
                     // Registrar en auditoría
-                    await _auditService.LogActivityAsync(
-                        usuarioId.Value,
-                        "Cerrar Sesión",
-                        "Usuario",
-                        usuarioId.Value,
-                        null,
-                        "Cierre de sesión"
-                    );
+                    try
+                    {
+                        await _auditService.LogActivityAsync(
+                            usuarioId.Value,
+                            "Cerrar Sesión",
+                            "Usuario",
+                            usuarioId.Value,
+                            null,
+                            null,
+                            "Cierre de sesión"
+                        );
+                    }
+                    catch (Exception auditEx)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error en auditoría: {auditEx.Message}");
+                    }
                 }
 
                 // Limpiar la sesión
@@ -249,20 +282,35 @@ namespace SistemaPermisos.Controllers
                     await _context.SaveChangesAsync();
 
                     // Registrar en auditoría
-                    await _auditService.LogActivityAsync(
-                        null,
-                        "Solicitar Restablecimiento",
-                        "Usuario",
-                        usuario.Id,
-                        null,
-                        "Solicitud de restablecimiento de contraseña"
-                    );
+                    try
+                    {
+                        await _auditService.LogActivityAsync(
+                            null,
+                            "Solicitar Restablecimiento",
+                            "Usuario",
+                            usuario.Id,
+                            null,
+                            null,
+                            "Solicitud de restablecimiento de contraseña"
+                        );
+                    }
+                    catch (Exception auditEx)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error en auditoría: {auditEx.Message}");
+                    }
 
                     // Construir el enlace de restablecimiento
                     var resetLink = Url.Action("ResetPassword", "Account", new { token }, Request.Scheme);
 
                     // Enviar correo con el enlace
-                    await _emailService.SendPasswordResetEmailAsync(usuario.Correo, resetLink);
+                    try
+                    {
+                        await _emailService.SendPasswordResetEmailAsync(usuario.Correo, resetLink);
+                    }
+                    catch (Exception emailEx)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error enviando email: {emailEx.Message}");
+                    }
 
                     TempData["SuccessMessage"] = "Se han enviado instrucciones a su correo electrónico.";
                     return RedirectToAction("Login");
@@ -350,14 +398,22 @@ namespace SistemaPermisos.Controllers
                     await _context.SaveChangesAsync();
 
                     // Registrar en auditoría
-                    await _auditService.LogActivityAsync(
-                        usuario.Id,
-                        "Restablecer Contraseña",
-                        "Usuario",
-                        usuario.Id,
-                        null,
-                        "Contraseña restablecida correctamente"
-                    );
+                    try
+                    {
+                        await _auditService.LogActivityAsync(
+                            usuario.Id,
+                            "Restablecer Contraseña",
+                            "Usuario",
+                            usuario.Id,
+                            null,
+                            null,
+                            "Contraseña restablecida correctamente"
+                        );
+                    }
+                    catch (Exception auditEx)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error en auditoría: {auditEx.Message}");
+                    }
 
                     TempData["SuccessMessage"] = "Su contraseña ha sido restablecida correctamente.";
                     return RedirectToAction("Login");

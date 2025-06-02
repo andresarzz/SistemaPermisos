@@ -46,24 +46,6 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IExportService, ExportService>();
 
-// Configurar Authentication
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(options =>
-    {
-        options.LoginPath = "/Account/Login";
-        options.LogoutPath = "/Account/Logout";
-        options.AccessDeniedPath = "/Account/AccessDenied";
-        options.ExpireTimeSpan = TimeSpan.FromHours(8);
-        options.SlidingExpiration = true;
-    });
-
-// Configurar Authorization
-builder.Services.AddAuthorization(options =>
-{
-    options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
-    options.AddPolicy("SupervisorOrAdmin", policy => policy.RequireRole("Supervisor", "Admin"));
-});
-
 var app = builder.Build();
 
 // Configurar el pipeline de solicitudes HTTP
@@ -84,14 +66,10 @@ app.UseSession();
 // Middleware personalizado para manejo de excepciones globales
 app.UseMiddleware<ErrorHandlingMiddleware>();
 
-app.UseAuthentication();
-app.UseAuthorization();
-
-// Middleware personalizado para verificar la autenticación
+// Middleware personalizado para verificar la autenticación (SIMPLIFICADO)
 app.Use(async (context, next) =>
 {
     var path = context.Request.Path.Value?.ToLower() ?? string.Empty;
-    var isAuthenticated = context.User?.Identity?.IsAuthenticated ?? false;
 
     // Rutas que no requieren autenticación
     var publicPaths = new[] {
@@ -107,12 +85,27 @@ app.Use(async (context, next) =>
                        path.StartsWith("/lib/") ||
                        path.StartsWith("/css/") ||
                        path.StartsWith("/js/") ||
-                       path.StartsWith("/images/");
+                       path.StartsWith("/images/") ||
+                       path.StartsWith("/favicon");
 
-    if (!isAuthenticated && !isPublicPath)
+    // Si es una ruta pública, continuar sin verificar autenticación
+    if (isPublicPath)
     {
-        context.Response.Redirect("/Account/Login");
+        await next();
         return;
+    }
+
+    // Verificar si el usuario está autenticado (usando sesión)
+    var usuarioId = context.Session.GetInt32("UsuarioId");
+
+    if (usuarioId == null)
+    {
+        // Solo redirigir si no estamos ya en la página de login
+        if (!path.StartsWith("/account/login"))
+        {
+            context.Response.Redirect("/Account/Login");
+            return;
+        }
     }
 
     await next();
@@ -120,7 +113,7 @@ app.Use(async (context, next) =>
 
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
+    pattern: "{controller=Account}/{action=Login}/{id?}");
 
 // Asegurar que la base de datos esté creada y las migraciones aplicadas
 using (var scope = app.Services.CreateScope())
