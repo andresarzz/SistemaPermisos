@@ -302,14 +302,22 @@ namespace SistemaPermisos.Controllers
                     // Construir el enlace de restablecimiento
                     var resetLink = Url.Action("ResetPassword", "Account", new { token }, Request.Scheme);
 
-                    // Enviar correo con el enlace
-                    try
+                    // Verificar que resetLink no sea nulo
+                    if (resetLink != null)
                     {
-                        await _emailService.SendPasswordResetEmailAsync(usuario.Correo, resetLink);
+                        // Enviar correo con el enlace
+                        try
+                        {
+                            await _emailService.SendPasswordResetEmailAsync(usuario.Correo, resetLink);
+                        }
+                        catch (Exception emailEx)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"Error enviando email: {emailEx.Message}");
+                        }
                     }
-                    catch (Exception emailEx)
+                    else
                     {
-                        System.Diagnostics.Debug.WriteLine($"Error enviando email: {emailEx.Message}");
+                        System.Diagnostics.Debug.WriteLine("Error: resetLink es nulo");
                     }
 
                     TempData["SuccessMessage"] = "Se han enviado instrucciones a su correo electrónico.";

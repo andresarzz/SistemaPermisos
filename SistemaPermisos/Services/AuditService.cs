@@ -42,10 +42,10 @@ namespace SistemaPermisos.Services
                 _context.AuditLogs.Add(auditLog);
                 await _context.SaveChangesAsync();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // Log error but don't throw to avoid breaking the main operation
-                System.Diagnostics.Debug.WriteLine($"Error logging audit: {ex.Message}");
+                // En producción, usar un logger apropiado
             }
         }
 
@@ -64,16 +64,44 @@ namespace SistemaPermisos.Services
                     ValoresAnteriores = oldValues,
                     ValoresNuevos = newValues,
                     DireccionIP = ipAddress,
+                    Descripcion = null,
                     Fecha = DateTime.Now
                 };
 
                 _context.AuditLogs.Add(auditLog);
                 await _context.SaveChangesAsync();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // Log error but don't throw to avoid breaking the main operation
-                System.Diagnostics.Debug.WriteLine($"Error logging activity: {ex.Message}");
+            }
+        }
+
+        public async Task LogActivityAsync(int? userId, string action, string entity, int? entityId, string? oldValues, string? newValues, string? description)
+        {
+            try
+            {
+                var ipAddress = GetClientIpAddress();
+
+                var auditLog = new AuditLog
+                {
+                    UsuarioId = userId,
+                    Accion = action,
+                    Entidad = entity,
+                    RegistroId = entityId,
+                    ValoresAnteriores = oldValues,
+                    ValoresNuevos = newValues,
+                    DireccionIP = ipAddress,
+                    Descripcion = description,
+                    Fecha = DateTime.Now
+                };
+
+                _context.AuditLogs.Add(auditLog);
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception)
+            {
+                // Log error but don't throw to avoid breaking the main operation
             }
         }
 
@@ -127,6 +155,15 @@ namespace SistemaPermisos.Services
                 .ToListAsync();
         }
 
+        public async Task<PaginatedList<AuditLog>> GetAllActivityAsync(int pageIndex, int pageSize)
+        {
+            var query = _context.AuditLogs
+                .Include(al => al.Usuario)
+                .OrderByDescending(al => al.Fecha);
+
+            return await PaginatedList<AuditLog>.CreateAsync(query, pageIndex, pageSize);
+        }
+
         public async Task<PaginatedList<AuditLog>> GetPaginatedAuditLogsAsync(int pageIndex, int pageSize, int? userId = null, string? action = null)
         {
             var query = _context.AuditLogs
@@ -158,9 +195,9 @@ namespace SistemaPermisos.Services
                     return userId;
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                System.Diagnostics.Debug.WriteLine($"Error getting current user ID: {ex.Message}");
+                // Error getting user ID
             }
 
             return null;
@@ -185,9 +222,8 @@ namespace SistemaPermisos.Services
 
                 return ipAddress ?? "Unknown";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                System.Diagnostics.Debug.WriteLine($"Error getting client IP: {ex.Message}");
                 return "Unknown";
             }
         }

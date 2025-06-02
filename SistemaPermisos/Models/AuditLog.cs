@@ -12,27 +12,40 @@ namespace SistemaPermisos.Models
         public int? UsuarioId { get; set; }
 
         [Required]
-        [StringLength(50)]
+        [StringLength(100)]
         public string Accion { get; set; } = string.Empty;
 
         [Required]
-        [StringLength(50)]
+        [StringLength(100)]
         public string Entidad { get; set; } = string.Empty;
 
         public int? RegistroId { get; set; }
 
-        [StringLength(2000)]
         public string? ValoresAnteriores { get; set; }
 
-        [StringLength(2000)]
         public string? ValoresNuevos { get; set; }
 
-        [Required]
         [StringLength(45)]
-        public string DireccionIP { get; set; } = string.Empty;
+        public string? DireccionIP { get; set; }
 
-        [Required]
+        public string? Descripcion { get; set; }
+
         public DateTime Fecha { get; set; } = DateTime.Now;
+
+        // Propiedades adicionales para compatibilidad con vistas
+        [NotMapped]
+        public DateTime FechaActividad
+        {
+            get => Fecha;
+            set => Fecha = value;
+        }
+
+        [NotMapped]
+        public string TipoEntidad
+        {
+            get => Entidad;
+            set => Entidad = value;
+        }
 
         // Propiedades de compatibilidad (NotMapped para evitar duplicación en BD)
         [NotMapped]
