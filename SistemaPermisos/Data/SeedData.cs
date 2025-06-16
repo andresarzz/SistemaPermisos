@@ -1,53 +1,39 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.EntityFrameworkCore;
 using SistemaPermisos.Models;
-using SistemaPermisos.Services;
-using System;
-using System.Linq;
-using System.Threading.Tasks;
+using BCrypt.Net;
 
 namespace SistemaPermisos.Data
 {
-    public static class SeedData
+    public class SeedData
     {
-        public static async Task Initialize(IServiceProvider serviceProvider)
+        public static void Initialize(IServiceProvider serviceProvider)
         {
-            using var scope = serviceProvider.CreateScope();
-            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+            using var context = new ApplicationDbContext(
+                serviceProvider.GetRequiredService<DbContextOptions<ApplicationDbContext>>());
 
-            try
+            // Verificar si ya hay datos
+            if (context.Set<Usuario>().Any())
             {
-                // Verificar si ya existe un usuario administrador
-                if (context.Usuarios.Any(u => u.Rol == "Admin"))
-                {
-                    logger.LogInformation("Usuario administrador ya existe.");
-                    return;
-                }
-
-                // Crear usuario administrador por defecto
-                var adminUser = new Usuario
-                {
-                    Nombre = "Administrador del Sistema",
-                    Correo = "admin@sistema.com",
-                    Password = BCrypt.Net.BCrypt.HashPassword("Admin123!"),
-                    Rol = "Admin",
-                    Activo = true,
-                    FechaRegistro = DateTime.Now,
-                    UltimaActualizacion = DateTime.Now
-                };
-
-                context.Usuarios.Add(adminUser);
-                await context.SaveChangesAsync();
-
-                logger.LogInformation("Usuario administrador creado exitosamente:");
-                logger.LogInformation("Email: admin@sistema.com");
-                logger.LogInformation("Password: Admin123!");
+                return; // Ya hay datos
             }
-            catch (Exception ex)
+
+            // Crear usuario administrador por defecto
+            var adminUser = new Usuario
             {
-                logger.LogError(ex, "Error al crear el usuario administrador.");
-            }
+                Nombre = "Administrador",
+                Apellidos = "Sistema",
+                Correo = "admin@sistema.com",
+                NombreUsuario = "admin",
+                Password = BCrypt.Net.BCrypt.HashPassword("Admin123!"),
+                Rol = "Admin",
+                Activo = true,
+                FechaCreacion = DateTime.Now,
+                FechaRegistro = DateTime.Now,
+                UltimaActualizacion = DateTime.Now
+            };
+
+            context.Set<Usuario>().Add(adminUser);
+            context.SaveChanges();
         }
     }
 }

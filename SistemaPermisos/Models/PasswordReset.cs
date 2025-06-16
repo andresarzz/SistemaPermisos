@@ -1,5 +1,4 @@
-﻿using System;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SistemaPermisos.Models
@@ -9,22 +8,24 @@ namespace SistemaPermisos.Models
         [Key]
         public int Id { get; set; }
 
+        [Required]
         public int UsuarioId { get; set; }
 
         [Required]
-        [StringLength(100)]
+        [StringLength(255)]
         public string Token { get; set; } = string.Empty;
 
         public DateTime FechaCreacion { get; set; } = DateTime.Now;
 
         public DateTime FechaExpiracion { get; set; }
 
+        public bool Usado { get; set; } = false;
         public bool Utilizado { get; set; } = false;
 
         public DateTime? FechaUso { get; set; }
 
         // Navegación
         [ForeignKey("UsuarioId")]
-        public virtual Usuario? Usuario { get; set; }
+        public virtual Usuario Usuario { get; set; } = null!;
     }
 }

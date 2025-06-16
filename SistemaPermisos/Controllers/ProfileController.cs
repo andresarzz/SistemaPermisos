@@ -269,4 +269,3 @@ namespace SistemaPermisos.Controllers
         }
     }
 }
-

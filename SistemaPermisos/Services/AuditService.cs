@@ -45,7 +45,6 @@ namespace SistemaPermisos.Services
             catch (Exception)
             {
                 // Log error but don't throw to avoid breaking the main operation
-                // En producción, usar un logger apropiado
             }
         }
 
@@ -64,7 +63,6 @@ namespace SistemaPermisos.Services
                     ValoresAnteriores = oldValues,
                     ValoresNuevos = newValues,
                     DireccionIP = ipAddress,
-                    Descripcion = null,
                     Fecha = DateTime.Now
                 };
 

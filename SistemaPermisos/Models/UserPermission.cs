@@ -1,5 +1,4 @@
-﻿using System;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SistemaPermisos.Models
@@ -9,9 +8,8 @@ namespace SistemaPermisos.Models
         [Key]
         public int Id { get; set; }
 
+        [Required]
         public int UsuarioId { get; set; }
-
-        public int PermisoId { get; set; }
 
         [Required]
         [StringLength(100)]
@@ -21,10 +19,8 @@ namespace SistemaPermisos.Models
 
         public DateTime FechaAsignacion { get; set; } = DateTime.Now;
 
-        public DateTime? FechaRevocacion { get; set; }
-
         // Navegación
         [ForeignKey("UsuarioId")]
-        public virtual Usuario? Usuario { get; set; }
+        public virtual Usuario Usuario { get; set; } = null!;
     }
 }

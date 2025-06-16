@@ -1,136 +1,104 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using SistemaPermisos.Data;
 using SistemaPermisos.Middleware;
+using SistemaPermisos.Repositories;
 using SistemaPermisos.Services;
-using System;
-
-#nullable enable
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configurar servicios
 builder.Services.AddControllersWithViews();
 
-// Configurar sesiones
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
 builder.Services.AddSession(options =>
 {
-    options.IdleTimeout = TimeSpan.FromHours(8);
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
 });
 
-// Configurar la conexión a la base de datos
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-if (string.IsNullOrEmpty(connectionString))
-{
-    throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-}
-
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(connectionString));
-
-// Registrar IHttpContextAccessor antes de los servicios que lo utilizan
 builder.Services.AddHttpContextAccessor();
 
-// Registrar servicios
+builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
 builder.Services.AddScoped<IAuditService, AuditService>();
-builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IExportService, ExportService>();
+builder.Services.AddScoped<IUserService, UserService>();
+
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/Account/Login";
+        options.LogoutPath = "/Account/Logout";
+        options.AccessDeniedPath = "/Account/AccessDenied";
+        options.ExpireTimeSpan = TimeSpan.FromHours(8);
+        options.SlidingExpiration = true;
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    });
+
+builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-// Configurar el pipeline de solicitudes HTTP
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
 }
+else
+{
+    app.UseDeveloperExceptionPage();
+}
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
-
 app.UseRouting();
-
-// Usar sesiones
 app.UseSession();
-
-// Middleware personalizado para manejo de excepciones globales
 app.UseMiddleware<ErrorHandlingMiddleware>();
-
-// Middleware personalizado para verificar la autenticación (SIMPLIFICADO)
-app.Use(async (context, next) =>
-{
-    var path = context.Request.Path.Value?.ToLower() ?? string.Empty;
-
-    // Rutas que no requieren autenticación
-    var publicPaths = new[] {
-        "/account/login",
-        "/account/forgotpassword",
-        "/account/resetpassword",
-        "/home/error",
-        "/account/accessdenied"
-    };
-
-    // Verificar si la ruta actual es pública o si contiene archivos estáticos
-    var isPublicPath = Array.Exists(publicPaths, p => path.StartsWith(p)) ||
-                       path.StartsWith("/lib/") ||
-                       path.StartsWith("/css/") ||
-                       path.StartsWith("/js/") ||
-                       path.StartsWith("/images/") ||
-                       path.StartsWith("/favicon");
-
-    // Si es una ruta pública, continuar sin verificar autenticación
-    if (isPublicPath)
-    {
-        await next();
-        return;
-    }
-
-    // Verificar si el usuario está autenticado (usando sesión)
-    var usuarioId = context.Session.GetInt32("UsuarioId");
-
-    if (usuarioId == null)
-    {
-        // Solo redirigir si no estamos ya en la página de login
-        if (!path.StartsWith("/account/login"))
-        {
-            context.Response.Redirect("/Account/Login");
-            return;
-        }
-    }
-
-    await next();
-});
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Account}/{action=Login}/{id?}");
 
-// Asegurar que la base de datos esté creada y las migraciones aplicadas
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     try
     {
         var context = services.GetRequiredService<ApplicationDbContext>();
-        context.Database.Migrate();
+        var logger = services.GetRequiredService<ILogger<Program>>();
 
-        // Crear usuario administrador por defecto
-        await SeedData.Initialize(services);
+        if (context.Database.CanConnect())
+        {
+            logger.LogInformation("Conexión a la base de datos establecida correctamente.");
+
+            var pendingMigrations = context.Database.GetPendingMigrations();
+            if (pendingMigrations.Any())
+            {
+                logger.LogInformation("Aplicando migraciones pendientes...");
+                context.Database.Migrate();
+                logger.LogInformation("Migraciones aplicadas correctamente.");
+            }
+
+            SeedData.Initialize(services);
+            logger.LogInformation("Datos semilla inicializados correctamente.");
+        }
+        else
+        {
+            logger.LogWarning("No se pudo establecer conexión con la base de datos.");
+        }
     }
     catch (Exception ex)
     {
         var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred while migrating or seeding the database.");
+        logger.LogError(ex, "Error durante la inicialización de la base de datos: {Message}", ex.Message);
     }
 }
 

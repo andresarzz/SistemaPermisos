@@ -1,5 +1,4 @@
-﻿using System;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SistemaPermisos.Models
@@ -9,25 +8,25 @@ namespace SistemaPermisos.Models
         [Key]
         public int Id { get; set; }
 
+        [Required]
         public int UsuarioId { get; set; }
 
         [Required]
-        [StringLength(100)]
-        public string ClaveSecreta { get; set; } = string.Empty;
+        [StringLength(10)]
+        public string Codigo { get; set; } = string.Empty;
 
-        public bool Habilitado { get; set; } = false;
+        [Required]
+        [StringLength(20)]
+        public string Tipo { get; set; } = string.Empty; // SMS, Email
 
         public DateTime FechaCreacion { get; set; } = DateTime.Now;
 
-        public DateTime FechaActualizacion { get; set; } = DateTime.Now;
+        public DateTime FechaExpiracion { get; set; }
 
-        [StringLength(10)]
-        public string? UltimoCodigo { get; set; }
-
-        public DateTime? FechaUltimoCodigo { get; set; }
+        public bool Usado { get; set; } = false;
 
         // Navegación
         [ForeignKey("UsuarioId")]
-        public virtual Usuario? Usuario { get; set; }
+        public virtual Usuario Usuario { get; set; } = null!;
     }
 }

@@ -18,4 +18,3 @@ namespace SistemaPermisos.Repositories
         Task<int> CompleteAsync();
     }
 }
-

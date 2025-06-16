@@ -12,8 +12,8 @@ using SistemaPermisos.Data;
 namespace SistemaPermisos.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250526193628_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20250616193708_CreateAdminUser")]
+    partial class CreateAdminUser
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -37,43 +37,64 @@ namespace SistemaPermisos.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<string>("DatosAntiguos")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DatosNuevos")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Descripcion")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
                     b.Property<string>("DireccionIP")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasMaxLength(45)
+                        .HasColumnType("nvarchar(45)");
 
                     b.Property<string>("Entidad")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<int?>("EntidadId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("Fecha")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETDATE()");
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaActividad")
+                        .HasColumnType("datetime2");
 
                     b.Property<int?>("RegistroId")
                         .HasColumnType("int");
 
                     b.Property<string>("Tabla")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TipoEntidad")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("UsuarioId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("UsuarioId1")
+                        .HasColumnType("int");
+
                     b.Property<string>("ValoresAnteriores")
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ValoresNuevos")
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Fecha");
+
                     b.HasIndex("UsuarioId");
+
+                    b.HasIndex("UsuarioId1");
 
                     b.ToTable("AuditLogs");
                 });
@@ -86,30 +107,52 @@ namespace SistemaPermisos.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
 
+                    b.Property<int?>("AprobadoPorId")
+                        .HasColumnType("int");
+
                     b.Property<string>("CategoriaPersonal")
+                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Cedula")
+                        .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("ComentariosAprobador")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<string>("Estado")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<DateTime>("Fecha")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaAprobacion")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime>("FechaOmision")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime>("FechaRegistro")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETDATE()");
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaSolicitud")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Instancia")
+                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Justificacion")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("Motivo")
                         .IsRequired()
@@ -121,6 +164,7 @@ namespace SistemaPermisos.Migrations
                         .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("Puesto")
+                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
@@ -134,13 +178,16 @@ namespace SistemaPermisos.Migrations
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Titulo")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<int>("UsuarioId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AprobadoPorId");
 
                     b.HasIndex("UsuarioId");
 
@@ -156,9 +203,7 @@ namespace SistemaPermisos.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
 
                     b.Property<DateTime>("FechaCreacion")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETDATE()");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime>("FechaExpiracion")
                         .HasColumnType("datetime2");
@@ -168,10 +213,16 @@ namespace SistemaPermisos.Migrations
 
                     b.Property<string>("Token")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<bool>("Usado")
+                        .HasColumnType("bit");
 
                     b.Property<int>("UsuarioId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("UsuarioId1")
                         .HasColumnType("int");
 
                     b.Property<bool>("Utilizado")
@@ -184,6 +235,8 @@ namespace SistemaPermisos.Migrations
 
                     b.HasIndex("UsuarioId");
 
+                    b.HasIndex("UsuarioId1");
+
                     b.ToTable("PasswordResets");
                 });
 
@@ -195,12 +248,19 @@ namespace SistemaPermisos.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
 
+                    b.Property<int?>("AprobadoPorId")
+                        .HasColumnType("int");
+
                     b.Property<int?>("CantidadLecciones")
                         .HasColumnType("int");
 
                     b.Property<string>("Cedula")
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("ComentariosAprobador")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<string>("Condicion")
                         .HasMaxLength(50)
@@ -214,6 +274,9 @@ namespace SistemaPermisos.Migrations
                     b.Property<DateTime>("Fecha")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("FechaAprobacion")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime>("FechaFin")
                         .HasColumnType("datetime2");
 
@@ -221,9 +284,7 @@ namespace SistemaPermisos.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime>("FechaSolicitud")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETDATE()");
+                        .HasColumnType("datetime2");
 
                     b.Property<TimeSpan?>("HoraDesde")
                         .HasColumnType("time");
@@ -282,8 +343,8 @@ namespace SistemaPermisos.Migrations
 
                     b.Property<string>("TipoPermiso")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("TipoRebajo")
                         .HasMaxLength(50)
@@ -293,6 +354,8 @@ namespace SistemaPermisos.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AprobadoPorId");
 
                     b.HasIndex("UsuarioId");
 
@@ -307,10 +370,20 @@ namespace SistemaPermisos.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
 
+                    b.Property<int?>("AsignadoAUsuarioId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ComentariosResolucion")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<decimal?>("CostoEstimado")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("Descripcion")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<string>("Equipo")
                         .IsRequired()
@@ -323,9 +396,7 @@ namespace SistemaPermisos.Migrations
                         .HasColumnType("nvarchar(20)");
 
                     b.Property<DateTime>("FechaReporte")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETDATE()");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("FechaResolucion")
                         .HasColumnType("datetime2");
@@ -335,22 +406,33 @@ namespace SistemaPermisos.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("RutaImagen")
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
-                    b.Property<string>("Ubicacion")
+                    b.Property<string>("TipoDano")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Ubicacion")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("UrlFoto")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<int>("UsuarioId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AsignadoAUsuarioId");
+
                     b.HasIndex("UsuarioId");
 
-                    b.ToTable("ReportesDanos");
+                    b.ToTable("ReporteDano");
                 });
 
             modelBuilder.Entity("SistemaPermisos.Models.TwoFactorAuth", b =>
@@ -361,38 +443,40 @@ namespace SistemaPermisos.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
 
-                    b.Property<string>("ClaveSecreta")
+                    b.Property<string>("Codigo")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<DateTime>("FechaActualizacion")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETDATE()");
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
 
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("datetime2");
 
-                    b.Property<DateTime?>("FechaUltimoCodigo")
+                    b.Property<DateTime>("FechaExpiracion")
                         .HasColumnType("datetime2");
 
-                    b.Property<bool>("Habilitado")
-                        .HasColumnType("bit");
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
-                    b.Property<string>("UltimoCodigo")
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
+                    b.Property<bool>("Usado")
+                        .HasColumnType("bit");
 
                     b.Property<int>("UsuarioId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("UsuarioId1")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("UsuarioId")
-                        .IsUnique();
+                    b.HasIndex("UsuarioId");
 
-                    b.ToTable("TwoFactorAuths");
+                    b.HasIndex("UsuarioId1")
+                        .IsUnique()
+                        .HasFilter("[UsuarioId1] IS NOT NULL");
+
+                    b.ToTable("TwoFactorAuth");
                 });
 
             modelBuilder.Entity("SistemaPermisos.Models.UserPermission", b =>
@@ -407,20 +491,12 @@ namespace SistemaPermisos.Migrations
                         .HasColumnType("bit");
 
                     b.Property<DateTime>("FechaAsignacion")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETDATE()");
-
-                    b.Property<DateTime?>("FechaRevocacion")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Permiso")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
-
-                    b.Property<int>("PermisoId")
-                        .HasColumnType("int");
 
                     b.Property<int>("UsuarioId")
                         .HasColumnType("int");
@@ -444,6 +520,10 @@ namespace SistemaPermisos.Migrations
                     b.Property<bool>("Activo")
                         .HasColumnType("bit");
 
+                    b.Property<string>("Apellidos")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<string>("Cedula")
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
@@ -461,27 +541,31 @@ namespace SistemaPermisos.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime?>("FechaNacimiento")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime>("FechaRegistro")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETDATE()");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("FotoPerfil")
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("Nombre")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<string>("NombreUsuario")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<string>("Password")
                         .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Puesto")
                         .HasMaxLength(100)
@@ -497,9 +581,10 @@ namespace SistemaPermisos.Migrations
                         .HasColumnType("nvarchar(20)");
 
                     b.Property<DateTime>("UltimaActualizacion")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETDATE()");
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("UltimoAcceso")
+                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
@@ -512,20 +597,30 @@ namespace SistemaPermisos.Migrations
             modelBuilder.Entity("SistemaPermisos.Models.AuditLog", b =>
                 {
                     b.HasOne("SistemaPermisos.Models.Usuario", "Usuario")
-                        .WithMany("AuditLogs")
+                        .WithMany()
                         .HasForeignKey("UsuarioId")
                         .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("SistemaPermisos.Models.Usuario", null)
+                        .WithMany("AuditLogs")
+                        .HasForeignKey("UsuarioId1");
 
                     b.Navigation("Usuario");
                 });
 
             modelBuilder.Entity("SistemaPermisos.Models.OmisionMarca", b =>
                 {
-                    b.HasOne("SistemaPermisos.Models.Usuario", "Usuario")
+                    b.HasOne("SistemaPermisos.Models.Usuario", "AprobadoPor")
                         .WithMany("OmisionesMarca")
+                        .HasForeignKey("AprobadoPorId");
+
+                    b.HasOne("SistemaPermisos.Models.Usuario", "Usuario")
+                        .WithMany()
                         .HasForeignKey("UsuarioId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("AprobadoPor");
 
                     b.Navigation("Usuario");
                 });
@@ -533,32 +628,48 @@ namespace SistemaPermisos.Migrations
             modelBuilder.Entity("SistemaPermisos.Models.PasswordReset", b =>
                 {
                     b.HasOne("SistemaPermisos.Models.Usuario", "Usuario")
-                        .WithMany("PasswordResets")
+                        .WithMany()
                         .HasForeignKey("UsuarioId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("SistemaPermisos.Models.Usuario", null)
+                        .WithMany("PasswordResets")
+                        .HasForeignKey("UsuarioId1");
 
                     b.Navigation("Usuario");
                 });
 
             modelBuilder.Entity("SistemaPermisos.Models.Permiso", b =>
                 {
-                    b.HasOne("SistemaPermisos.Models.Usuario", "Usuario")
+                    b.HasOne("SistemaPermisos.Models.Usuario", "AprobadoPor")
                         .WithMany("Permisos")
+                        .HasForeignKey("AprobadoPorId");
+
+                    b.HasOne("SistemaPermisos.Models.Usuario", "Usuario")
+                        .WithMany()
                         .HasForeignKey("UsuarioId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("AprobadoPor");
 
                     b.Navigation("Usuario");
                 });
 
             modelBuilder.Entity("SistemaPermisos.Models.ReporteDano", b =>
                 {
-                    b.HasOne("SistemaPermisos.Models.Usuario", "Usuario")
+                    b.HasOne("SistemaPermisos.Models.Usuario", "AsignadoAUsuario")
                         .WithMany("ReportesDanos")
+                        .HasForeignKey("AsignadoAUsuarioId");
+
+                    b.HasOne("SistemaPermisos.Models.Usuario", "Usuario")
+                        .WithMany()
                         .HasForeignKey("UsuarioId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("AsignadoAUsuario");
 
                     b.Navigation("Usuario");
                 });
@@ -566,10 +677,14 @@ namespace SistemaPermisos.Migrations
             modelBuilder.Entity("SistemaPermisos.Models.TwoFactorAuth", b =>
                 {
                     b.HasOne("SistemaPermisos.Models.Usuario", "Usuario")
-                        .WithOne("TwoFactorAuth")
-                        .HasForeignKey("SistemaPermisos.Models.TwoFactorAuth", "UsuarioId")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("SistemaPermisos.Models.Usuario", null)
+                        .WithOne("TwoFactorAuth")
+                        .HasForeignKey("SistemaPermisos.Models.TwoFactorAuth", "UsuarioId1");
 
                     b.Navigation("Usuario");
                 });

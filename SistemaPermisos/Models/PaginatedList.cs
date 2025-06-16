@@ -11,20 +11,22 @@ namespace SistemaPermisos.Models
         public int PageIndex { get; private set; }
         public int TotalPages { get; private set; }
         public int TotalCount { get; private set; }
-        public bool HasPreviousPage => PageIndex > 1;
-        public bool HasNextPage => PageIndex < TotalPages;
-
-        // Propiedad Items para compatibilidad
-        public List<T> Items => this.ToList();
 
         public PaginatedList(List<T> items, int count, int pageIndex, int pageSize)
         {
             PageIndex = pageIndex;
-            TotalPages = (int)Math.Ceiling(count / (double)pageSize);
+            TotalPages = (int)pageSize > 0 ? (int)Math.Ceiling(count / (double)pageSize) : 0;
             TotalCount = count;
 
             this.AddRange(items);
         }
+
+        public bool HasPreviousPage => PageIndex > 1;
+
+        public bool HasNextPage => PageIndex < TotalPages;
+
+        // Propiedad de compatibilidad
+        public List<T> Items => this.ToList();
 
         public static async Task<PaginatedList<T>> CreateAsync(IQueryable<T> source, int pageIndex, int pageSize)
         {
