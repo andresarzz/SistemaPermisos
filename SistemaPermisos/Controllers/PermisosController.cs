@@ -119,6 +119,7 @@ namespace SistemaPermisos.Controllers
             var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
             if (usuarioId == null)
             {
+                TempData["ErrorMessage"] = "Debe iniciar sesión para crear un permiso.";
                 return RedirectToAction("Login", "Account");
             }
 
@@ -128,7 +129,7 @@ namespace SistemaPermisos.Controllers
                 {
                     // Procesar la imagen del comprobante
                     string rutaComprobante = null;
-                    if (model.Comprobante != null)
+                    if (model.Comprobante != null && model.Comprobante.Length > 0)
                     {
                         string uploadsFolder = Path.Combine(_hostEnvironment.WebRootPath, "uploads", "comprobantes");
                         string uniqueFileName = Guid.NewGuid().ToString() + "_" + model.Comprobante.FileName;
@@ -148,7 +149,10 @@ namespace SistemaPermisos.Controllers
                     var permiso = new Permiso
                     {
                         UsuarioId = usuarioId.Value,
+                        TipoPermiso = "Solicitud de Permiso", // Valor por defecto
                         Fecha = model.Fecha,
+                        FechaInicio = model.Fecha, // Usar la misma fecha
+                        FechaFin = model.Fecha, // Usar la misma fecha
                         HoraDesde = !string.IsNullOrEmpty(model.HoraDesde) ? TimeSpan.Parse(model.HoraDesde) : null,
                         HoraHasta = !string.IsNullOrEmpty(model.HoraHasta) ? TimeSpan.Parse(model.HoraHasta) : null,
                         JornadaCompleta = model.JornadaCompleta,
@@ -159,46 +163,65 @@ namespace SistemaPermisos.Controllers
                         Condicion = model.Condicion,
                         TipoMotivo = model.TipoMotivo,
                         TipoConvocatoria = model.TipoConvocatoria,
-                        Motivo = model.TipoMotivo == "Asuntos personales" ? model.Motivo : model.TipoMotivo,
+                        Motivo = !string.IsNullOrEmpty(model.Motivo) ? model.Motivo : model.TipoMotivo,
                         Observaciones = model.Observaciones,
                         HoraSalida = model.HoraSalida,
                         RutaComprobante = rutaComprobante,
                         Estado = "Pendiente",
                         FechaSolicitud = DateTime.Now,
-                        RutaJustificacion = null
+                        RutaJustificacion = null,
+                        Justificado = false
                     };
 
                     // Actualizar información del usuario si es necesario
                     var usuario = await _context.Usuarios.FindAsync(usuarioId);
                     if (usuario != null)
                     {
-                        if (string.IsNullOrEmpty(usuario.Cedula))
+                        bool usuarioActualizado = false;
+
+                        if (string.IsNullOrEmpty(usuario.Cedula) && !string.IsNullOrEmpty(model.Cedula))
                         {
                             usuario.Cedula = model.Cedula;
+                            usuarioActualizado = true;
                         }
-                        if (string.IsNullOrEmpty(usuario.Puesto))
+                        if (string.IsNullOrEmpty(usuario.Puesto) && !string.IsNullOrEmpty(model.Puesto))
                         {
                             usuario.Puesto = model.Puesto;
+                            usuarioActualizado = true;
                         }
-                        _context.Update(usuario);
+
+                        if (usuarioActualizado)
+                        {
+                            _context.Update(usuario);
+                        }
                     }
 
                     _context.Add(permiso);
                     await _context.SaveChangesAsync();
+
+                    TempData["SuccessMessage"] = "Solicitud de permiso enviada exitosamente.";
                     return RedirectToAction(nameof(Index));
                 }
                 catch (FormatException ex)
                 {
-                    // Manejar errores de formato en la conversión de TimeSpan
-                    ModelState.AddModelError("", "Formato de hora inválido. Use el formato HH:MM.");
+                    ModelState.AddModelError("", "Formato de hora inválido. Use el formato HH:MM (ejemplo: 08:30).");
                 }
                 catch (Exception ex)
                 {
-                    // Manejar otras excepciones
                     ModelState.AddModelError("", "Ocurrió un error al procesar la solicitud: " + ex.Message);
+                    // Log del error para debugging
+                    System.Diagnostics.Debug.WriteLine($"Error en Create Permiso: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"Stack Trace: {ex.StackTrace}");
                 }
             }
+            else
+            {
+                // Agregar información de errores de validación para debugging
+                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+                System.Diagnostics.Debug.WriteLine($"Errores de validación: {string.Join(", ", errors)}");
+            }
 
+            // Si llegamos aquí, algo salió mal, volver a mostrar el formulario
             return View(model);
         }
 

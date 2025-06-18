@@ -12,10 +12,10 @@ namespace SistemaPermisos.ViewModels
         public DateTime Fecha { get; set; }
 
         [Display(Name = "Hora desde")]
-        public string HoraDesde { get; set; }
+        public string? HoraDesde { get; set; }
 
         [Display(Name = "Hora hasta")]
-        public string HoraHasta { get; set; }
+        public string? HoraHasta { get; set; }
 
         [Display(Name = "Jornada completa")]
         public bool JornadaCompleta { get; set; }
@@ -28,33 +28,33 @@ namespace SistemaPermisos.ViewModels
 
         [Required(ErrorMessage = "La cédula es obligatoria")]
         [Display(Name = "Cédula")]
-        public string Cedula { get; set; }
+        public string Cedula { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "El puesto es obligatorio")]
         [Display(Name = "Puesto")]
-        public string Puesto { get; set; }
+        public string Puesto { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "La condición es obligatoria")]
         [Display(Name = "Condición")]
-        public string Condicion { get; set; }
+        public string Condicion { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "El tipo de motivo es obligatorio")]
         [Display(Name = "Tipo de motivo")]
-        public string TipoMotivo { get; set; }
+        public string TipoMotivo { get; set; } = string.Empty;
 
         [Display(Name = "Tipo de convocatoria")]
-        public string TipoConvocatoria { get; set; }
+        public string? TipoConvocatoria { get; set; }
 
         [Display(Name = "Motivo")]
-        public string Motivo { get; set; }
+        public string? Motivo { get; set; }
 
         [Display(Name = "Observaciones")]
-        public string Observaciones { get; set; }
+        public string? Observaciones { get; set; }
 
         [Display(Name = "Hora de salida")]
-        public string HoraSalida { get; set; }
+        public string? HoraSalida { get; set; }
 
         [Display(Name = "Comprobante")]
-        public IFormFile Comprobante { get; set; }
+        public IFormFile? Comprobante { get; set; }
     }
 }

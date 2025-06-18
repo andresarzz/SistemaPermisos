@@ -238,36 +238,42 @@
     }
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('Formulario de permisos cargado');
+
             // Mostrar/ocultar opciones de convocatoria
             const motivoConvocatoria = document.getElementById('motivoConvocatoria');
             const tipoConvocatoriaOptions = document.getElementById('tipoConvocatoriaOptions');
 
-            motivoConvocatoria.addEventListener('change', function() {
-                if (this.checked) {
-                    tipoConvocatoriaOptions.style.display = 'block';
-                } else {
-                    tipoConvocatoriaOptions.style.display = 'none';
-                }
-            });
+            if (motivoConvocatoria && tipoConvocatoriaOptions) {
+                motivoConvocatoria.addEventListener('change', function() {
+                    if (this.checked) {
+                        tipoConvocatoriaOptions.style.display = 'block';
+                    } else {
+                        tipoConvocatoriaOptions.style.display = 'none';
+                    }
+                });
+            }
 
             // Mostrar/ocultar detalles de asuntos personales
             const motivoAsuntosPersonales = document.getElementById('motivoAsuntosPersonales');
             const asuntosPersonalesDetails = document.getElementById('asuntosPersonalesDetails');
 
-            motivoAsuntosPersonales.addEventListener('change', function() {
-                if (this.checked) {
-                    asuntosPersonalesDetails.style.display = 'block';
-                } else {
-                    asuntosPersonalesDetails.style.display = 'none';
-                }
-            });
+            if (motivoAsuntosPersonales && asuntosPersonalesDetails) {
+                motivoAsuntosPersonales.addEventListener('change', function() {
+                    if (this.checked) {
+                        asuntosPersonalesDetails.style.display = 'block';
+                    } else {
+                        asuntosPersonalesDetails.style.display = 'none';
+                    }
+                });
+            }
 
             // Inicializar estado de los campos según valores iniciales
-            if (motivoConvocatoria.checked) {
+            if (motivoConvocatoria && motivoConvocatoria.checked) {
                 tipoConvocatoriaOptions.style.display = 'block';
             }
 
-            if (motivoAsuntosPersonales.checked) {
+            if (motivoAsuntosPersonales && motivoAsuntosPersonales.checked) {
                 asuntosPersonalesDetails.style.display = 'block';
             }
 
@@ -290,7 +296,33 @@
                     }
                 });
             }
+
+            // Validación del formulario antes del envío
+            const form = document.querySelector('form');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    console.log('Enviando formulario...');
+
+                    // Validar que al menos un tipo de motivo esté seleccionado
+                    const tipoMotivo = document.querySelector('input[name="TipoMotivo"]:checked');
+                    if (!tipoMotivo) {
+                        alert('Por favor seleccione un motivo para la solicitud.');
+                        e.preventDefault();
+                        return false;
+                    }
+
+                    // Validar condición
+                    const condicion = document.querySelector('input[name="Condicion"]:checked');
+                    if (!condicion) {
+                        alert('Por favor seleccione una condición (Propietario o Interino).');
+                        e.preventDefault();
+                        return false;
+                    }
+
+                    console.log('Formulario válido, enviando...');
+                    return true;
+                });
+            }
         });
     </script>
 }
-
