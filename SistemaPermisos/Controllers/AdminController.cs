@@ -24,9 +24,13 @@ namespace SistemaPermisos.Controllers
             _auditService = auditService;
         }
 
+        public async Task<IActionResult> Index()
+        {
+            return await Dashboard();
+        }
+
         public async Task<IActionResult> Dashboard()
         {
-            // Verificar autenticación y rol
             var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
             var usuarioRol = HttpContext.Session.GetString("UsuarioRol");
 
@@ -35,16 +39,14 @@ namespace SistemaPermisos.Controllers
                 return RedirectToAction("Login", "Account");
             }
 
-            // Obtener estadísticas para el dashboard
             var totalUsuarios = await _context.Usuarios.CountAsync();
             var usuariosActivos = await _context.Usuarios.CountAsync(u => u.Activo);
             var totalPermisos = await _context.Permisos.CountAsync();
             var permisosPendientes = await _context.Permisos.CountAsync(p => p.Estado == "Pendiente");
             var totalOmisiones = await _context.OmisionesMarca.CountAsync();
             var omisionesPendientes = await _context.OmisionesMarca.CountAsync(o => o.Estado == "Pendiente");
-            var totalReportes = await _context.ReportesDano.CountAsync();
+            var totalReportes = await _context.ReportesDanos.CountAsync();
 
-            // Obtener actividad reciente
             var actividadReciente = await _auditService.GetAllActivityAsync(1, 10);
 
             var viewModel = new AdminDashboardViewModel
@@ -59,73 +61,7 @@ namespace SistemaPermisos.Controllers
                 ActividadReciente = actividadReciente.Items.ToList()
             };
 
-            return View(viewModel);
-        }
-
-        public IActionResult Usuarios()
-        {
-            var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
-            var usuarioRol = HttpContext.Session.GetString("UsuarioRol");
-
-            if (usuarioId == null || usuarioRol != "Admin")
-            {
-                return RedirectToAction("Login", "Account");
-            }
-
-            return RedirectToAction("Index", "Users");
-        }
-
-        public IActionResult Permisos()
-        {
-            var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
-            var usuarioRol = HttpContext.Session.GetString("UsuarioRol");
-
-            if (usuarioId == null || usuarioRol != "Admin")
-            {
-                return RedirectToAction("Login", "Account");
-            }
-
-            return RedirectToAction("Index", "Permisos");
-        }
-
-        public IActionResult Omisiones()
-        {
-            var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
-            var usuarioRol = HttpContext.Session.GetString("UsuarioRol");
-
-            if (usuarioId == null || usuarioRol != "Admin")
-            {
-                return RedirectToAction("Login", "Account");
-            }
-
-            return RedirectToAction("Index", "Omisiones");
-        }
-
-        public IActionResult Reportes()
-        {
-            var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
-            var usuarioRol = HttpContext.Session.GetString("UsuarioRol");
-
-            if (usuarioId == null || usuarioRol != "Admin")
-            {
-                return RedirectToAction("Login", "Account");
-            }
-
-            return RedirectToAction("Index", "Reportes");
-        }
-
-        public async Task<IActionResult> Auditoria()
-        {
-            var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
-            var usuarioRol = HttpContext.Session.GetString("UsuarioRol");
-
-            if (usuarioId == null || usuarioRol != "Admin")
-            {
-                return RedirectToAction("Login", "Account");
-            }
-
-            var auditLogs = await _auditService.GetAllActivityAsync(1, 50);
-            return View(auditLogs);
+            return View("Dashboard", viewModel);
         }
     }
 }

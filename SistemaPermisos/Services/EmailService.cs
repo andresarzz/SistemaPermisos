@@ -20,19 +20,28 @@ namespace SistemaPermisos.Services
         public EmailService(IConfiguration configuration)
         {
             _configuration = configuration;
-            _smtpServer = _configuration["EmailSettings:SmtpServer"];
-            _smtpPort = int.Parse(_configuration["EmailSettings:SmtpPort"]);
-            _smtpUsername = _configuration["EmailSettings:SmtpUsername"];
-            _smtpPassword = _configuration["EmailSettings:SmtpPassword"];
-            _fromEmail = _configuration["EmailSettings:FromEmail"];
-            _fromName = _configuration["EmailSettings:FromName"];
-            _enableSsl = bool.Parse(_configuration["EmailSettings:EnableSsl"]);
+
+            // Corregir las rutas de configuración para que coincidan con appsettings.json
+            _smtpServer = _configuration["EmailSettings:SmtpServer"] ?? "smtp.gmail.com";
+            _smtpPort = int.Parse(_configuration["EmailSettings:SmtpPort"] ?? "587");
+            _smtpUsername = _configuration["EmailSettings:SmtpUsername"] ?? "";
+            _smtpPassword = _configuration["EmailSettings:SmtpPassword"] ?? "";
+            _fromEmail = _configuration["EmailSettings:SenderEmail"] ?? "";
+            _fromName = _configuration["EmailSettings:SenderName"] ?? "MIPP+";
+            _enableSsl = bool.Parse(_configuration["EmailSettings:EnableSsl"] ?? "true");
         }
 
         public async Task<bool> SendEmailAsync(string to, string subject, string body, bool isHtml = true)
         {
             try
             {
+                // Validar que los campos requeridos no estén vacíos
+                if (string.IsNullOrEmpty(_smtpServer) || string.IsNullOrEmpty(_fromEmail))
+                {
+                    System.Diagnostics.Debug.WriteLine("Configuración de email incompleta");
+                    return false;
+                }
+
                 var message = new MailMessage
                 {
                     From = new MailAddress(_fromEmail, _fromName),
@@ -46,7 +55,10 @@ namespace SistemaPermisos.Services
                 using (var client = new SmtpClient(_smtpServer, _smtpPort))
                 {
                     client.EnableSsl = _enableSsl;
-                    client.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
+                    if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
+                    {
+                        client.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
+                    }
                     await client.SendMailAsync(message);
                 }
 
@@ -62,7 +74,7 @@ namespace SistemaPermisos.Services
 
         public async Task<bool> SendPasswordResetEmailAsync(string to, string resetLink)
         {
-            string subject = "Restablecimiento de Contraseña";
+            string subject = "Restablecimiento de Contraseña - MIPP+";
             string body = $@"
                 <html>
                 <head>
@@ -78,17 +90,17 @@ namespace SistemaPermisos.Services
                 <body>
                     <div class='container'>
                         <div class='header'>
-                            <h2>Restablecimiento de Contraseña</h2>
+                            <h2>Restablecimiento de Contraseña - MIPP+</h2>
                         </div>
                         <div class='content'>
-                            <p>Hemos recibido una solicitud para restablecer la contraseña de su cuenta.</p>
+                            <p>Hemos recibido una solicitud para restablecer la contraseña de su cuenta en MIPP+.</p>
                             <p>Para continuar con el proceso, haga clic en el siguiente enlace:</p>
                             <p><a href='{resetLink}' class='button'>Restablecer Contraseña</a></p>
                             <p>Si no solicitó restablecer su contraseña, puede ignorar este correo.</p>
                             <p>El enlace expirará en 24 horas.</p>
                         </div>
                         <div class='footer'>
-                            <p>Este es un correo automático, por favor no responda a este mensaje.</p>
+                            <p>Este es un correo automático de MIPP+, por favor no responda a este mensaje.</p>
                         </div>
                     </div>
                 </body>
@@ -99,7 +111,7 @@ namespace SistemaPermisos.Services
 
         public async Task<bool> SendWelcomeEmailAsync(string to, string userName)
         {
-            string subject = "Bienvenido al Sistema de Permisos";
+            string subject = "Bienvenido a MIPP+";
             string body = $@"
                 <html>
                 <head>
@@ -114,16 +126,16 @@ namespace SistemaPermisos.Services
                 <body>
                     <div class='container'>
                         <div class='header'>
-                            <h2>¡Bienvenido al Sistema de Permisos!</h2>
+                            <h2>¡Bienvenido a MIPP+!</h2>
                         </div>
                         <div class='content'>
                             <p>Hola {userName},</p>
-                            <p>Su cuenta ha sido creada exitosamente en nuestro sistema.</p>
-                            <p>Ahora puede iniciar sesión y comenzar a utilizar todas las funcionalidades disponibles.</p>
+                            <p>Su cuenta ha sido creada exitosamente en nuestro sistema MIPP+.</p>
+                            <p>Ahora puede iniciar sesión y comenzar a utilizar todas las funcionalidades disponibles para gestionar permisos, omisiones y reportes.</p>
                             <p>Si tiene alguna pregunta o necesita ayuda, no dude en contactar al administrador del sistema.</p>
                         </div>
                         <div class='footer'>
-                            <p>Este es un correo automático, por favor no responda a este mensaje.</p>
+                            <p>Este es un correo automático de MIPP+, por favor no responda a este mensaje.</p>
                         </div>
                     </div>
                 </body>
@@ -148,13 +160,14 @@ namespace SistemaPermisos.Services
                 <body>
                     <div class='container'>
                         <div class='header'>
-                            <h2>{subject}</h2>
+                            <h2>Notificación - MIPP+</h2>
                         </div>
                         <div class='content'>
+                            <h3>{subject}</h3>
                             <p>{message}</p>
                         </div>
                         <div class='footer'>
-                            <p>Este es un correo automático, por favor no responda a este mensaje.</p>
+                            <p>Este es un correo automático de MIPP+, por favor no responda a este mensaje.</p>
                         </div>
                     </div>
                 </body>
@@ -165,7 +178,7 @@ namespace SistemaPermisos.Services
 
         public async Task<bool> Send2FACodeAsync(string to, string code)
         {
-            string subject = "Código de Verificación";
+            string subject = "Código de Verificación - MIPP+";
             string body = $@"
                 <html>
                 <head>
@@ -181,16 +194,16 @@ namespace SistemaPermisos.Services
                 <body>
                     <div class='container'>
                         <div class='header'>
-                            <h2>Código de Verificación</h2>
+                            <h2>Código de Verificación - MIPP+</h2>
                         </div>
                         <div class='content'>
-                            <p>Su código de verificación es:</p>
+                            <p>Su código de verificación para MIPP+ es:</p>
                             <div class='code'>{code}</div>
                             <p>Este código expirará en 5 minutos.</p>
                             <p>Si no solicitó este código, por favor ignore este correo y cambie su contraseña inmediatamente.</p>
                         </div>
                         <div class='footer'>
-                            <p>Este es un correo automático, por favor no responda a este mensaje.</p>
+                            <p>Este es un correo automático de MIPP+, por favor no responda a este mensaje.</p>
                         </div>
                     </div>
                 </body>
