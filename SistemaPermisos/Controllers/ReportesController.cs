@@ -108,25 +108,40 @@ namespace SistemaPermisos.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(ReporteViewModel model)
         {
-            // Verificar si el usuario está autenticado
-            var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
-            if (usuarioId == null)
+            try
             {
-                return RedirectToAction("Login", "Account");
-            }
+                // Verificar si el usuario está autenticado
+                var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
+                if (usuarioId == null)
+                {
+                    return RedirectToAction("Login", "Account");
+                }
 
-            if (ModelState.IsValid)
-            {
+                Console.WriteLine($"ModelState.IsValid: {ModelState.IsValid}");
+
+                if (!ModelState.IsValid)
+                {
+                    foreach (var error in ModelState)
+                    {
+                        Console.WriteLine($"Error en {error.Key}: {string.Join(", ", error.Value.Errors.Select(e => e.ErrorMessage))}");
+                    }
+                    return View(model);
+                }
+
                 // Procesar la imagen del reporte
                 string? rutaImagen = null;
-                if (model.Imagen != null)
+                if (model.Imagen != null && model.Imagen.Length > 0)
                 {
                     string uploadsFolder = Path.Combine(_hostEnvironment.WebRootPath, "uploads", "reportes");
-                    string uniqueFileName = Guid.NewGuid().ToString() + "_" + model.Imagen.FileName;
-                    string filePath = Path.Combine(uploadsFolder, uniqueFileName);
 
                     // Asegurar que el directorio existe
-                    Directory.CreateDirectory(uploadsFolder);
+                    if (!Directory.Exists(uploadsFolder))
+                    {
+                        Directory.CreateDirectory(uploadsFolder);
+                    }
+
+                    string uniqueFileName = Guid.NewGuid().ToString() + "_" + model.Imagen.FileName;
+                    string filePath = Path.Combine(uploadsFolder, uniqueFileName);
 
                     using (var fileStream = new FileStream(filePath, FileMode.Create))
                     {
@@ -139,9 +154,9 @@ namespace SistemaPermisos.Controllers
                 var reporte = new ReporteDano
                 {
                     UsuarioId = usuarioId.Value,
-                    Equipo = model.Equipo,
-                    Ubicacion = model.Ubicacion,
-                    Descripcion = model.Descripcion,
+                    Equipo = model.Equipo ?? string.Empty,
+                    Ubicacion = model.Ubicacion ?? string.Empty,
+                    Descripcion = model.Descripcion ?? string.Empty,
                     RutaImagen = rutaImagen,
                     Estado = "Pendiente",
                     FechaReporte = DateTime.Now
@@ -150,20 +165,35 @@ namespace SistemaPermisos.Controllers
                 _context.Add(reporte);
                 await _context.SaveChangesAsync();
 
-                // Registrar en auditoría
-                await _auditService.LogActivityAsync(
-                    usuarioId,
-                    "Crear",
-                    "ReporteDano",
-                    reporte.Id,
-                    null,
-                    $"Nuevo reporte: {reporte.Equipo} - {reporte.Ubicacion}"
-                );
+                Console.WriteLine($"Reporte guardado con ID: {reporte.Id}");
 
+                // Registrar en auditoría
+                try
+                {
+                    await _auditService.LogActivityAsync(
+                        usuarioId,
+                        "Crear",
+                        "ReporteDano",
+                        reporte.Id,
+                        null,
+                        $"Nuevo reporte: {reporte.Equipo} - {reporte.Ubicacion}"
+                    );
+                }
+                catch (Exception auditEx)
+                {
+                    Console.WriteLine($"Error en auditoría: {auditEx.Message}");
+                    // No fallar por error de auditoría
+                }
+
+                TempData["Success"] = "Reporte enviado exitosamente";
                 return RedirectToAction(nameof(Index));
             }
-
-            return View(model);
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al crear reporte: {ex.Message}");
+                ModelState.AddModelError("", "Ocurrió un error al procesar su solicitud. Por favor, inténtelo de nuevo.");
+                return View(model);
+            }
         }
 
         // GET: Reportes/MarkAsResolved/5 (Solo para administradores)
