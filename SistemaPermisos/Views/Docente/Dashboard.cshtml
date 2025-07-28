@@ -1,123 +1,210 @@
 ﻿@model SistemaPermisos.ViewModels.DocenteDashboardViewModel
 
 @{
-    ViewData["Title"] = "Mi Panel";
+    ViewData["Title"] = "Panel de Docente";
 }
 
-<div class="container-fluid">
+<div class="container mt-4">
+    <h2 class="mb-4">Panel de Docente</h2>
+
     <div class="row">
-        <div class="col-12">
-            <h1 class="h3 mb-4 text-gray-800">Mi Panel</h1>
-        </div>
-    </div>
-
-    <!-- Tarjetas de estadísticas -->
-    <div class="row">
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-primary shadow h-100 py-2">
+        <div class="col-md-4 mb-3">
+            <div class="card text-white bg-primary">
                 <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                Mis Permisos
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.MisPermisos</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
+                    <h5 class="card-title">Mis Permisos Solicitados</h5>
+                    <p class="card-text display-4">@Model.TotalPermisosSolicitados</p>
                 </div>
             </div>
         </div>
-
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-warning shadow h-100 py-2">
+        <div class="col-md-4 mb-3">
+            <div class="card text-white bg-info">
                 <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                Pendientes
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.PermisosPendientes</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-clock fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
+                    <h5 class="card-title">Mis Omisiones Solicitadas</h5>
+                    <p class="card-text display-4">@Model.TotalOmisionesSolicitadas</p>
                 </div>
             </div>
         </div>
-
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-success shadow h-100 py-2">
+        <div class="col-md-4 mb-3">
+            <div class="card text-white bg-danger">
                 <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                Aprobados
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.PermisosAprobados</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-check fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-info shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                Mis Omisiones
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.MisOmisiones</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
+                    <h5 class="card-title">Mis Reportes de Daño Creados</h5>
+                    <p class="card-text display-4">@Model.TotalReportesCreados</p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Acciones rápidas -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Acciones Rápidas</h6>
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    Mis Últimos Permisos
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-3 mb-3">
-                            <a href="@Url.Action("Create", "Permisos")" class="btn btn-primary btn-block">
-                                <i class="fas fa-plus"></i> Solicitar Permiso
-                            </a>
+                    @if (!Model.MisPermisosRecientes.Any())
+                    {
+                        <p class="text-center">No has solicitado permisos recientemente.</p>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Tipo</th>
+                                        <th>Fecha Solicitud</th>
+                                        <th>Estado</th>
+                                        <th>Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var permiso in Model.MisPermisosRecientes)
+                                    {
+                                        <tr>
+                                            <td>@permiso.TipoPermiso</td>
+                                            <td>@permiso.FechaSolicitud.ToString("dd/MM/yyyy")</td>
+                                            <td>@permiso.Estado</td>
+                                            <td><a asp-controller="Permisos" asp-action="Details" asp-route-id="@permiso.Id" class="btn btn-sm btn-info">Ver Detalles</a></td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
                         </div>
-                        <div class="col-md-3 mb-3">
-                            <a href="@Url.Action("MisPermisos", "Docente")" class="btn btn-info btn-block">
-                                <i class="fas fa-list"></i> Mis Permisos
-                            </a>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <a href="@Url.Action("Create", "Omisiones")" class="btn btn-warning btn-block">
-                                <i class="fas fa-exclamation-triangle"></i> Reportar Omisión
-                            </a>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <a href="@Url.Action("MisOmisiones", "Docente")" class="btn btn-secondary btn-block">
-                                <i class="fas fa-list"></i> Mis Omisiones
-                            </a>
-                        </div>
-                    </div>
+                    }
+                </div>
+                <div class="card-footer text-right">
+                    <a asp-controller="Permisos" asp-action="Index" class="btn btn-outline-primary">Ver Todos Mis Permisos</a>
                 </div>
             </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    Mis Últimas Omisiones
+                </div>
+                <div class="card-body">
+                    @if (!Model.MisOmisionesRecientes.Any())
+                    {
+                        <p class="text-center">No has solicitado omisiones recientemente.</p>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Tipo</th>
+                                        <th>Fecha Omisión</th>
+                                        <th>Estado</th>
+                                        <th>Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var omision in Model.MisOmisionesRecientes)
+                                    {
+                                        <tr>
+                                            <td>@omision.TipoOmision</td>
+                                            <td>@omision.FechaOmision.ToString("dd/MM/yyyy")</td>
+                                            <td>@omision.Estado</td>
+                                            <td><a asp-controller="Omisiones" asp-action="Details" asp-route-id="@omision.Id" class="btn btn-sm btn-info">Ver Detalles</a></td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+                <div class="card-footer text-right">
+                    <a asp-controller="Omisiones" asp-action="Index" class="btn btn-outline-info">Ver Todas Mis Omisiones</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    Mis Últimos Reportes de Daño
+                </div>
+                <div class="card-body">
+                    @if (!Model.MisReportesRecientes.Any())
+                    {
+                        <p class="text-center">No has creado reportes de daño recientemente.</p>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Tipo Daño</th>
+                                        <th>Equipo</th>
+                                        <th>Fecha Reporte</th>
+                                        <th>Estado</th>
+                                        <th>Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var reporte in Model.MisReportesRecientes)
+                                    {
+                                        <tr>
+                                            <td>@reporte.TipoDano</td>
+                                            <td>@reporte.Equipo</td>
+                                            <td>@reporte.FechaReporte.ToString("dd/MM/yyyy")</td>
+                                            <td>@reporte.Estado</td>
+                                            <td><a asp-controller="Reportes" asp-action="Details" asp-route-id="@reporte.Id" class="btn btn-sm btn-info">Ver Detalles</a></td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+                <div class="card-footer text-right">
+                    <a asp-controller="Reportes" asp-action="Index" class="btn btn-outline-danger">Ver Todos Mis Reportes</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-header">
+            Mi Actividad Reciente
+        </div>
+        <div class="card-body">
+            @if (!Model.ActividadReciente.Any())
+            {
+                <p class="text-center">No hay actividad reciente para mostrar.</p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Acción</th>
+                                <th>Detalles</th>
+                                <th>Fecha y Hora</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var log in Model.ActividadReciente)
+                            {
+                                <tr>
+                                    <td>@log.Accion</td>
+                                    <td>@log.Detalles</td>
+                                    <td>@log.FechaHora.ToString("dd/MM/yyyy HH:mm:ss")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+        <div class="card-footer text-right">
+            <a asp-controller="Profile" asp-action="Activity" class="btn btn-outline-info">Ver Todo Mi Registro de Actividad</a>
         </div>
     </div>
 </div>

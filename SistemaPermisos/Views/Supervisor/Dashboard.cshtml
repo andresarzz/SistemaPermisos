@@ -4,110 +4,209 @@
     ViewData["Title"] = "Panel de Supervisor";
 }
 
-<div class="container-fluid">
+<div class="container mt-4">
+    <h2 class="mb-4">Panel de Supervisor</h2>
+
     <div class="row">
-        <div class="col-12">
-            <h1 class="h3 mb-4 text-gray-800">Panel de Supervisor</h1>
-        </div>
-    </div>
-
-    <!-- Tarjetas de estadísticas -->
-    <div class="row">
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-warning shadow h-100 py-2">
+        <div class="col-md-4 mb-3">
+            <div class="card text-white bg-warning">
                 <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                Permisos Pendientes
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.PermisosPendientes</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-clock fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
+                    <h5 class="card-title">Permisos Pendientes</h5>
+                    <p class="card-text display-4">@Model.TotalPermisosPendientes</p>
                 </div>
             </div>
         </div>
-
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-success shadow h-100 py-2">
+        <div class="col-md-4 mb-3">
+            <div class="card text-white bg-info">
                 <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                Permisos Aprobados
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.PermisosAprobados</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-check fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
+                    <h5 class="card-title">Omisiones Pendientes</h5>
+                    <p class="card-text display-4">@Model.TotalOmisionesPendientes</p>
                 </div>
             </div>
         </div>
-
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-danger shadow h-100 py-2">
+        <div class="col-md-4 mb-3">
+            <div class="card text-white bg-danger">
                 <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
-                                Permisos Rechazados
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.PermisosRechazados</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-times fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-info shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                Omisiones Pendientes
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.OmisionesPendientes</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
+                    <h5 class="card-title">Reportes de Daño Pendientes</h5>
+                    <p class="card-text display-4">@Model.TotalReportesPendientes</p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Acciones rápidas -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Acciones Rápidas</h6>
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    Últimos Permisos Pendientes
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <a href="@Url.Action("Index", "Permisos")" class="btn btn-primary btn-block">
-                                <i class="fas fa-clipboard-list"></i> Revisar Permisos
-                            </a>
+                    @if (!Model.PermisosPendientes.Any())
+                    {
+                        <p class="text-center">No hay permisos pendientes.</p>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Usuario</th>
+                                        <th>Tipo</th>
+                                        <th>Fecha Solicitud</th>
+                                        <th>Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var permiso in Model.PermisosPendientes)
+                                    {
+                                        <tr>
+                                            <td>@permiso.Usuario?.NombreUsuario</td>
+                                            <td>@permiso.TipoPermiso</td>
+                                            <td>@permiso.FechaSolicitud.ToString("dd/MM/yyyy")</td>
+                                            <td><a asp-controller="Permisos" asp-action="Resolve" asp-route-id="@permiso.Id" class="btn btn-sm btn-primary">Resolver</a></td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <a href="@Url.Action("Index", "Omisiones")" class="btn btn-warning btn-block">
-                                <i class="fas fa-exclamation-triangle"></i> Revisar Omisiones
-                            </a>
-                        </div>
-                    </div>
+                    }
+                </div>
+                <div class="card-footer text-right">
+                    <a asp-controller="Permisos" asp-action="Index" class="btn btn-outline-primary">Ver Todos los Permisos</a>
                 </div>
             </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    Últimas Omisiones Pendientes
+                </div>
+                <div class="card-body">
+                    @if (!Model.OmisionesPendientes.Any())
+                    {
+                        <p class="text-center">No hay omisiones pendientes.</p>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Usuario</th>
+                                        <th>Tipo</th>
+                                        <th>Fecha Omisión</th>
+                                        <th>Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var omision in Model.OmisionesPendientes)
+                                    {
+                                        <tr>
+                                            <td>@omision.Usuario?.NombreUsuario</td>
+                                            <td>@omision.TipoOmision</td>
+                                            <td>@omision.FechaOmision.ToString("dd/MM/yyyy")</td>
+                                            <td><a asp-controller="Omisiones" asp-action="Resolve" asp-route-id="@omision.Id" class="btn btn-sm btn-primary">Resolver</a></td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+                <div class="card-footer text-right">
+                    <a asp-controller="Omisiones" asp-action="Index" class="btn btn-outline-info">Ver Todas las Omisiones</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    Últimos Reportes de Daño Pendientes
+                </div>
+                <div class="card-body">
+                    @if (!Model.ReportesPendientes.Any())
+                    {
+                        <p class="text-center">No hay reportes de daño pendientes.</p>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Usuario</th>
+                                        <th>Tipo Daño</th>
+                                        <th>Equipo</th>
+                                        <th>Fecha Reporte</th>
+                                        <th>Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var reporte in Model.ReportesPendientes)
+                                    {
+                                        <tr>
+                                            <td>@reporte.Usuario?.NombreUsuario</td>
+                                            <td>@reporte.TipoDano</td>
+                                            <td>@reporte.Equipo</td>
+                                            <td>@reporte.FechaReporte.ToString("dd/MM/yyyy")</td>
+                                            <td><a asp-controller="Reportes" asp-action="Resolve" asp-route-id="@reporte.Id" class="btn btn-sm btn-primary">Resolver</a></td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+                <div class="card-footer text-right">
+                    <a asp-controller="Reportes" asp-action="Index" class="btn btn-outline-danger">Ver Todos los Reportes</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-header">
+            Actividad Reciente del Sistema
+        </div>
+        <div class="card-body">
+            @if (!Model.ActividadReciente.Any())
+            {
+                <p class="text-center">No hay actividad reciente para mostrar.</p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Usuario</th>
+                                <th>Acción</th>
+                                <th>Detalles</th>
+                                <th>Fecha y Hora</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var log in Model.ActividadReciente)
+                            {
+                                <tr>
+                                    <td>@log.Usuario?.NombreUsuario</td>
+                                    <td>@log.Accion</td>
+                                    <td>@log.Detalles</td>
+                                    <td>@log.FechaHora.ToString("dd/MM/yyyy HH:mm:ss")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+        <div class="card-footer text-right">
+            <a asp-controller="Users" asp-action="AuditLog" class="btn btn-outline-info">Ver Todo el Registro de Auditoría</a>
         </div>
     </div>
 </div>

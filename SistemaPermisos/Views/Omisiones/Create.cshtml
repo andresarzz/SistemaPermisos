@@ -1,161 +1,104 @@
 ﻿@model SistemaPermisos.ViewModels.OmisionViewModel
 
 @{
-    ViewData["Title"] = "Justificación de Omisión de Marca";
+    ViewData["Title"] = "Solicitar Omisión de Marca";
 }
 
-<div class="container">
-    <div class="card">
-        <div class="card-header">
-            <h1><i class="fas fa-clock"></i> @ViewData["Title"]</h1>
-        </div>
-        <div class="card-body">
-            <form id="omisionForm">
-                @Html.AntiForgeryToken()
+<div class="container mt-4">
+    <h2 class="mb-4">Solicitar Nueva Omisión de Marca</h2>
 
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group mb-3">
-                            <label asp-for="FechaOmision" class="form-label">Fecha de Omisión *</label>
-                            <input asp-for="FechaOmision" class="form-control" type="date" required />
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    Datos de la Omisión
+                </div>
+                <div class="card-body">
+                    <form asp-action="Create" enctype="multipart/form-data">
+                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                        <div class="form-group">
+                            <label asp-for="TipoOmision"></label>
+                            <select asp-for="TipoOmision" class="form-control">
+                                <option value="">-- Seleccione un tipo --</option>
+                                <option value="Entrada">Entrada</option>
+                                <option value="Salida">Salida</option>
+                                <option value="Entrada y Salida">Entrada y Salida</option>
+                            </select>
+                            <span asp-validation-for="TipoOmision" class="text-danger"></span>
+                        </div>
+                        <div class="form-group">
+                            <label asp-for="FechaOmision"></label>
+                            <input asp-for="FechaOmision" type="date" class="form-control" />
                             <span asp-validation-for="FechaOmision" class="text-danger"></span>
                         </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group mb-3">
-                            <label asp-for="Cedula" class="form-label">Cédula *</label>
-                            <input asp-for="Cedula" class="form-control" placeholder="Ingrese su cédula" required />
+                        <div class="form-group">
+                            <label asp-for="HoraOmision"></label>
+                            <input asp-for="HoraOmision" type="time" class="form-control" />
+                            <span asp-validation-for="HoraOmision" class="text-danger"></span>
+                        </div>
+                        <div class="form-group">
+                            <label asp-for="Motivo"></label>
+                            <textarea asp-for="Motivo" class="form-control" rows="5"></textarea>
+                            <span asp-validation-for="Motivo" class="text-danger"></span>
+                        </div>
+                        <div class="form-group">
+                            <label asp-for="Cedula"></label>
+                            <input asp-for="Cedula" class="form-control" />
                             <span asp-validation-for="Cedula" class="text-danger"></span>
                         </div>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group mb-3">
-                            <label asp-for="Puesto" class="form-label">Puesto *</label>
-                            <input asp-for="Puesto" class="form-control" placeholder="Ingrese su puesto" required />
+                        <div class="form-group">
+                            <label asp-for="Puesto"></label>
+                            <input asp-for="Puesto" class="form-control" />
                             <span asp-validation-for="Puesto" class="text-danger"></span>
                         </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group mb-3">
-                            <label asp-for="Instancia" class="form-label">Instancia *</label>
-                            <input asp-for="Instancia" class="form-control" placeholder="Ingrese la instancia" required />
+                        <div class="form-group">
+                            <label asp-for="Instancia"></label>
+                            <input asp-for="Instancia" class="form-control" />
                             <span asp-validation-for="Instancia" class="text-danger"></span>
                         </div>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group mb-3">
-                            <label asp-for="CategoriaPersonal" class="form-label">Categoría de Personal *</label>
-                            <select asp-for="CategoriaPersonal" class="form-select" required>
-                                <option value="">Seleccione una categoría</option>
-                                <option value="Personal docente">Personal docente</option>
-                                <option value="Personal administrativo">Personal administrativo</option>
-                            </select>
+                        <div class="form-group">
+                            <label asp-for="CategoriaPersonal"></label>
+                            <input asp-for="CategoriaPersonal" class="form-control" />
                             <span asp-validation-for="CategoriaPersonal" class="text-danger"></span>
                         </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group mb-3">
-                            <label asp-for="Titulo" class="form-label">Título *</label>
-                            <select asp-for="Titulo" class="form-select" required>
-                                <option value="">Seleccione un título</option>
-                                <option value="Título I">Título I</option>
-                                <option value="Título II">Título II</option>
-                            </select>
+                        <div class="form-group">
+                            <label asp-for="Titulo"></label>
+                            <input asp-for="Titulo" class="form-control" />
                             <span asp-validation-for="Titulo" class="text-danger"></span>
                         </div>
-                    </div>
+                        <div class="form-group">
+                            <label asp-for="Evidencia"></label>
+                            <div class="custom-file">
+                                <input asp-for="Evidencia" type="file" class="custom-file-input" id="customFile">
+                                <label class="custom-file-label" for="customFile">Seleccionar archivo...</label>
+                            </div>
+                            <span asp-validation-for="Evidencia" class="text-danger"></span>
+                        </div>
+                        <div class="form-group mt-3">
+                            <button type="submit" class="btn btn-primary">Solicitar Omisión</button>
+                            <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
+                        </div>
+                    </form>
                 </div>
-
-                <div class="form-group mb-3">
-                    <label asp-for="TipoOmision" class="form-label">Tipo de Omisión *</label>
-                    <select asp-for="TipoOmision" class="form-select" required>
-                        <option value="">Seleccione el tipo de omisión</option>
-                        <option value="Entrada">Entrada</option>
-                        <option value="Salida">Salida</option>
-                        <option value="Todo el día">Todo el día</option>
-                        <option value="Salida anticipada">Salida anticipada</option>
-                    </select>
-                    <span asp-validation-for="TipoOmision" class="text-danger"></span>
-                </div>
-
-                <div class="form-group mb-3">
-                    <label asp-for="Motivo" class="form-label">Justificación *</label>
-                    <textarea asp-for="Motivo" class="form-control" rows="4" placeholder="Explique detalladamente el motivo de la omisión" required></textarea>
-                    <span asp-validation-for="Motivo" class="text-danger"></span>
-                </div>
-
-                <div class="form-group">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-paper-plane"></i> Enviar Justificación
-                    </button>
-                    <a asp-action="Index" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left"></i> Cancelar
-                    </a>
-                </div>
-            </form>
+            </div>
         </div>
     </div>
 </div>
 
 @section Scripts {
-    <script>
-        $(document).ready(function() {
-            $('#omisionForm').on('submit', function(e) {
-                e.preventDefault();
-
-                console.log('Enviando formulario de omisión...');
-
-                // Validar campos requeridos
-                var isValid = true;
-                var requiredFields = ['FechaOmision', 'Cedula', 'Puesto', 'Instancia', 'CategoriaPersonal', 'Titulo', 'TipoOmision', 'Motivo'];
-
-                requiredFields.forEach(function(field) {
-                    var value = $('[name="' + field + '"]').val();
-                    if (!value || value.trim() === '') {
-                        isValid = false;
-                        $('[name="' + field + '"]').addClass('is-invalid');
-                    } else {
-                        $('[name="' + field + '"]').removeClass('is-invalid');
-                    }
-                });
-
-                if (!isValid) {
-                    alert('Por favor, complete todos los campos requeridos.');
-                    return;
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                var customFileInput = document.getElementById('customFile');
+                if (customFileInput) {
+                    customFileInput.addEventListener('change', function (e) {
+                        var fileName = e.target.files[0].name;
+                        var label = e.target.nextElementSibling;
+                        label.innerText = fileName;
+                    });
                 }
-
-                var formData = $(this).serialize();
-                console.log('Datos del formulario:', formData);
-
-                $.ajax({
-                    url: '@Url.Action("Create", "Omisiones")',
-                    type: 'POST',
-                    data: formData,
-                    success: function(response) {
-                        console.log('Respuesta del servidor:', response);
-                        if (response.success) {
-                            alert(response.message);
-                            window.location.href = '@Url.Action("Index", "Omisiones")';
-                        } else {
-                            alert(response.error || 'Error al procesar la solicitud');
-                            if (response.validationErrors) {
-                                console.log('Errores de validación:', response.validationErrors);
-                            }
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('Error AJAX:', error);
-                        console.error('Respuesta:', xhr.responseText);
-                        alert('Error de conexión. Por favor, intente nuevamente.');
-                    }
-                });
             });
-        });
-    </script>
+        </script>
 }

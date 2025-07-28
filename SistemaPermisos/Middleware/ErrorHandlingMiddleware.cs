@@ -2,53 +2,35 @@
 using Microsoft.Extensions.Logging;
 using System;
 using System.Net;
-using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace SistemaPermisos.Middleware
 {
-    public class ErrorHandlingMiddleware
+    public class ErrorHandlingMiddleware : IMiddleware
     {
-        private readonly RequestDelegate _next;
         private readonly ILogger<ErrorHandlingMiddleware> _logger;
 
-        public ErrorHandlingMiddleware(RequestDelegate next, ILogger<ErrorHandlingMiddleware> logger)
+        public ErrorHandlingMiddleware(ILogger<ErrorHandlingMiddleware> logger)
         {
-            _next = next;
             _logger = logger;
         }
 
-        public async Task InvokeAsync(HttpContext context)
+        public async Task InvokeAsync(HttpContext context, RequestDelegate next)
         {
             try
             {
-                await _next(context);
+                await next(context);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error no controlado: {Message}", ex.Message);
-                await HandleExceptionAsync(context, ex);
+                _logger.LogError(ex, "An unhandled exception has occurred: {Message}", ex.Message);
+
+                context.Response.ContentType = "text/html"; // Ensure HTML content type
+                context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+
+                // Redirect to a generic error page
+                context.Response.Redirect("/Home/Error");
             }
-        }
-
-        private static async Task HandleExceptionAsync(HttpContext context, Exception exception)
-        {
-            context.Response.ContentType = "application/json";
-            context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-
-            var response = new
-            {
-                error = "Ocurrió un error al procesar su solicitud.",
-                detail = exception.Message
-            };
-
-            var options = new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            };
-
-            var json = JsonSerializer.Serialize(response, options);
-            await context.Response.WriteAsync(json);
         }
     }
 }

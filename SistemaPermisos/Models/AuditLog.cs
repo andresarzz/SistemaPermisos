@@ -9,70 +9,26 @@ namespace SistemaPermisos.Models
         [Key]
         public int Id { get; set; }
 
-        public int? UsuarioId { get; set; }
-
         [Required]
-        [StringLength(50)]
-        public string Accion { get; set; } = string.Empty;
+        public int UsuarioId { get; set; }
 
-        [Required]
-        [StringLength(50)]
-        public string Entidad { get; set; } = string.Empty;
-
-        public int? RegistroId { get; set; }
-
-        public string? ValoresAnteriores { get; set; }
-
-        public string? ValoresNuevos { get; set; }
-
-        [StringLength(45)]
-        public string? DireccionIP { get; set; }
-
-        [StringLength(1000)]
-        public string? Descripcion { get; set; }
-
-        public DateTime Fecha { get; set; } = DateTime.Now;
-
-        // Propiedades adicionales que faltan
-        public DateTime FechaActividad
-        {
-            get => Fecha;
-            set => Fecha = value;
-        }
-
-        public string TipoEntidad
-        {
-            get => Entidad;
-            set => Entidad = value;
-        }
-
-        // Navegación
         [ForeignKey("UsuarioId")]
-        public virtual Usuario? Usuario { get; set; }
+        public virtual Usuario Usuario { get; set; } = null!;
 
-        // Propiedades de compatibilidad
-        public string? DatosAntiguos
-        {
-            get => ValoresAnteriores;
-            set => ValoresAnteriores = value;
-        }
+        [Required]
+        [StringLength(100)]
+        public string Accion { get; set; } = string.Empty; // Ej. "Login", "Logout", "Crear Permiso", "Aprobar Permiso"
 
-        public string? DatosNuevos
-        {
-            get => ValoresNuevos;
-            set => ValoresNuevos = value;
-        }
+        [StringLength(500)]
+        public string? Detalles { get; set; }
 
-        public string Tabla
-        {
-            get => Entidad;
-            set => Entidad = value;
-        }
+        [Required]
+        public DateTime FechaHora { get; set; } = DateTime.Now;
 
-        public int? EntidadId
-        {
-            get => RegistroId;
-            set => RegistroId = value;
-        }
+        [StringLength(50)]
+        public string? IpAddress { get; set; }
+
+        [StringLength(255)]
+        public string? UserAgent { get; set; }
     }
 }

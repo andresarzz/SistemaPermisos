@@ -1,25 +1,15 @@
 ﻿@{
     ViewData["Title"] = "Acceso Denegado";
+    Layout = "_LayoutLogin";
 }
 
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card border-danger">
-                <div class="card-header bg-danger text-white">
-                    <h4 class="mb-0">Acceso Denegado</h4>
-                </div>
-                <div class="card-body text-center">
-                    <i class="fas fa-exclamation-triangle text-danger" style="font-size: 4rem;"></i>
-                    <h5 class="mt-3">No tiene permisos para acceder a esta página</h5>
-                    <p class="text-muted">
-                        Si considera que debería tener acceso a esta página, por favor contacte al administrador del sistema.
-                    </p>
-                    <a asp-controller="Home" asp-action="Index" class="btn btn-primary mt-3">
-                        <i class="fas fa-home"></i> Volver al Inicio
-                    </a>
-                </div>
-            </div>
-        </div>
+<div class="card shadow-sm">
+    <div class="card-header text-center bg-danger text-white">
+        <h4>Acceso Denegado</h4>
+    </div>
+    <div class="card-body text-center">
+        <p class="text-danger">No tiene los permisos necesarios para acceder a esta página.</p>
+        <p>Por favor, contacte al administrador del sistema si cree que esto es un error.</p>
+        <a asp-action="Login" asp-controller="Account" class="btn btn-primary mt-3">Volver al Inicio de Sesión</a>
     </div>
 </div>

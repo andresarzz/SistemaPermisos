@@ -1,42 +1,54 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Http;
+using System;
 using System.ComponentModel.DataAnnotations;
 
 namespace SistemaPermisos.ViewModels
 {
     public class OmisionViewModel
     {
-        [Required(ErrorMessage = "La fecha de omisión es obligatoria")]
-        [Display(Name = "Fecha de Omisión")]
+        public int Id { get; set; }
+
+        [Required(ErrorMessage = "El tipo de omisión es obligatorio.")]
+        [StringLength(100, ErrorMessage = "El tipo de omisión no puede exceder los 100 caracteres.")]
+        [Display(Name = "Tipo de Omisión")]
+        public string TipoOmision { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "La fecha de omisión es obligatoria.")]
         [DataType(DataType.Date)]
+        [Display(Name = "Fecha de Omisión")]
         public DateTime FechaOmision { get; set; }
 
-        [Required(ErrorMessage = "La cédula es obligatoria")]
+        [Required(ErrorMessage = "La hora de omisión es obligatoria.")]
+        [DataType(DataType.Time)]
+        [Display(Name = "Hora de Omisión")]
+        public TimeSpan HoraOmision { get; set; }
+
+        [Required(ErrorMessage = "El motivo es obligatorio.")]
+        [StringLength(500, ErrorMessage = "El motivo no puede exceder los 500 caracteres.")]
+        [Display(Name = "Motivo")]
+        public string Motivo { get; set; } = string.Empty;
+
+        [StringLength(20, ErrorMessage = "La cédula no puede exceder los 20 caracteres.")]
         [Display(Name = "Cédula")]
-        public string Cedula { get; set; }
+        public string? Cedula { get; set; }
 
-        [Required(ErrorMessage = "El puesto es obligatorio")]
+        [StringLength(100, ErrorMessage = "El puesto no puede exceder los 100 caracteres.")]
         [Display(Name = "Puesto")]
-        public string Puesto { get; set; }
+        public string? Puesto { get; set; }
 
-        [Required(ErrorMessage = "La instancia es obligatoria")]
+        [StringLength(100, ErrorMessage = "La instancia no puede exceder los 100 caracteres.")]
         [Display(Name = "Instancia")]
-        public string Instancia { get; set; }
+        public string? Instancia { get; set; }
 
-        [Required(ErrorMessage = "La categoría de personal es obligatoria")]
-        [Display(Name = "Categoría de Personal")]
-        public string CategoriaPersonal { get; set; } // Personal docente, Personal administrativo
+        [StringLength(100, ErrorMessage = "La categoría personal no puede exceder los 100 caracteres.")]
+        [Display(Name = "Categoría Personal")]
+        public string? CategoriaPersonal { get; set; }
 
-        [Required(ErrorMessage = "El título es obligatorio")]
+        [StringLength(255, ErrorMessage = "El título no puede exceder los 255 caracteres.")]
         [Display(Name = "Título")]
-        public string Titulo { get; set; } // Título I, Título II
+        public string? Titulo { get; set; }
 
-        [Required(ErrorMessage = "El tipo de omisión es obligatorio")]
-        [Display(Name = "Tipo de Omisión")]
-        public string TipoOmision { get; set; } // Entrada, Salida, Todo el día, Salida anticipada
-
-        [Required(ErrorMessage = "La justificación es obligatoria")]
-        [Display(Name = "Justificación")]
-        public string Motivo { get; set; }
+        [Display(Name = "Evidencia (Imagen/PDF)")]
+        public IFormFile? Evidencia { get; set; } // Para subir un archivo de evidencia
     }
 }
-

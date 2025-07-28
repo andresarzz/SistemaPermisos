@@ -4,43 +4,65 @@
     ViewData["Title"] = "Crear Reporte de Daño";
 }
 
-<div class="container">
-    <h1>@ViewData["Title"]</h1>
+<div class="container mt-4">
+    <h2 class="mb-4">Crear Nuevo Reporte de Daño</h2>
 
     <div class="row">
-        <div class="col-md-8">
+        <div class="col-md-8 offset-md-2">
             <div class="card">
+                <div class="card-header">
+                    Datos del Reporte
+                </div>
                 <div class="card-body">
                     <form asp-action="Create" enctype="multipart/form-data">
                         <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-
-                        <div class="form-group mb-3">
-                            <label asp-for="Equipo" class="control-label"></label>
-                            <input asp-for="Equipo" class="form-control" placeholder="Ej: Computadora, Proyector, Impresora" />
-                            <span asp-validation-for="Equipo" class="text-danger"></span>
+                        <div class="form-group">
+                            <label asp-for="TipoDano"></label>
+                            <select asp-for="TipoDano" class="form-control">
+                                <option value="">-- Seleccione un tipo --</option>
+                                <option value="Hardware">Hardware</option>
+                                <option value="Software">Software</option>
+                                <option value="Red">Red</option>
+                                <option value="Infraestructura">Infraestructura</option>
+                                <option value="Otro">Otro</option>
+                            </select>
+                            <span asp-validation-for="TipoDano" class="text-danger"></span>
                         </div>
-
-                        <div class="form-group mb-3">
-                            <label asp-for="Ubicacion" class="control-label"></label>
-                            <input asp-for="Ubicacion" class="form-control" placeholder="Ej: Aula 5, Laboratorio de Cómputo" />
-                            <span asp-validation-for="Ubicacion" class="text-danger"></span>
-                        </div>
-
-                        <div class="form-group mb-3">
-                            <label asp-for="Descripcion" class="control-label"></label>
-                            <textarea asp-for="Descripcion" class="form-control" rows="3" placeholder="Describa el daño detalladamente"></textarea>
+                        <div class="form-group">
+                            <label asp-for="Descripcion"></label>
+                            <textarea asp-for="Descripcion" class="form-control" rows="5"></textarea>
                             <span asp-validation-for="Descripcion" class="text-danger"></span>
                         </div>
-
-                        <div class="form-group mb-3">
-                            <label asp-for="Imagen" class="control-label"></label>
-                            <input asp-for="Imagen" class="form-control" type="file" accept="image/*" />
-                            <small class="form-text text-muted">Adjunte una imagen del daño (opcional)</small>
-                            <span asp-validation-for="Imagen" class="text-danger"></span>
+                        <div class="form-group">
+                            <label asp-for="FechaReporte"></label>
+                            <input asp-for="FechaReporte" type="date" class="form-control" />
+                            <span asp-validation-for="FechaReporte" class="text-danger"></span>
                         </div>
-
-                        <div class="form-group mb-3">
-                            <button type="submit" class="btn btn-primary">Enviar Reporte</button>
+                        <div class="form-group">
+                            <label asp-for="Equipo"></label>
+                            <input asp-for="Equipo" class="form-control" />
+                            <span asp-validation-for="Equipo" class="text-danger"></span>
+                        </div>
+                        <div class="form-group">
+                            <label asp-for="Ubicacion"></label>
+                            <input asp-for="Ubicacion" class="form-control" />
+                            <span asp-validation-for="Ubicacion" class="text-danger"></span>
+                        </div>
+                        <div class="form-group">
+                            <label asp-for="Observaciones"></label>
+                            <textarea asp-for="Observaciones" class="form-control" rows="3"></textarea>
+                            <span asp-validation-for="Observaciones" class="text-danger"></span>
+                        </div>
+                        <div class="form-group">
+                            <label asp-for="Evidencia"></label>
+                            <div class="custom-file">
+                                <input asp-for="Evidencia" type="file" class="custom-file-input" id="customFile">
+                                <label class="custom-file-label" for="customFile">Seleccionar archivo...</label>
+                            </div>
+                            <span asp-validation-for="Evidencia" class="text-danger"></span>
+                        </div>
+                        <div class="form-group mt-3">
+                            <button type="submit" class="btn btn-primary">Crear Reporte</button>
                             <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
                         </div>
                     </form>
@@ -50,21 +72,20 @@
     </div>
 </div>
 
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const form = document.querySelector('form');
-        const submitBtn = document.querySelector('button[type="submit"]');
-
-        form.addEventListener('submit', function(e) {
-            console.log('Formulario enviado');
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = 'Enviando...';
-        });
-    });
-</script>
-
 @section Scripts {
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                var customFileInput = document.getElementById('customFile');
+                if (customFileInput) {
+                    customFileInput.addEventListener('change', function (e) {
+                        var fileName = e.target.files[0].name;
+                        var label = e.target.nextElementSibling;
+                        label.innerText = fileName;
+                    });
+                }
+            });
+        </script>
 }

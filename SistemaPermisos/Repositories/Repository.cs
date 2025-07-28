@@ -16,7 +16,12 @@ namespace SistemaPermisos.Repositories
         public Repository(ApplicationDbContext context)
         {
             _context = context;
-            _dbSet = context.Set<T>();
+            _dbSet = _context.Set<T>();
+        }
+
+        public async Task<T?> GetByIdAsync(int id)
+        {
+            return await _dbSet.FindAsync(id);
         }
 
         public async Task<IEnumerable<T>> GetAllAsync()
@@ -24,14 +29,14 @@ namespace SistemaPermisos.Repositories
             return await _dbSet.ToListAsync();
         }
 
-        public async Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate)
+        public IQueryable<T> GetAll()
         {
-            return await _dbSet.Where(predicate).ToListAsync();
+            return _dbSet;
         }
 
-        public async Task<T> GetByIdAsync(int id)
+        public IQueryable<T> Find(Expression<Func<T, bool>> predicate)
         {
-            return await _dbSet.FindAsync(id);
+            return _dbSet.Where(predicate);
         }
 
         public async Task AddAsync(T entity)
@@ -39,34 +44,39 @@ namespace SistemaPermisos.Repositories
             await _dbSet.AddAsync(entity);
         }
 
-        public Task UpdateAsync(T entity)
+        public async Task AddRangeAsync(IEnumerable<T> entities)
         {
-            _dbSet.Attach(entity);
-            _context.Entry(entity).State = EntityState.Modified;
-            return Task.CompletedTask;
+            await _dbSet.AddRangeAsync(entities);
         }
 
-        public Task RemoveAsync(T entity)
+        public void Update(T entity)
+        {
+            _dbSet.Update(entity);
+        }
+
+        public void Remove(T entity)
         {
             _dbSet.Remove(entity);
-            return Task.CompletedTask;
         }
 
-        public async Task<int> CountAsync(Expression<Func<T, bool>> predicate = null)
+        public void RemoveRange(IEnumerable<T> entities)
         {
-            if (predicate == null)
-                return await _dbSet.CountAsync();
+            _dbSet.RemoveRange(entities);
+        }
+
+        public async Task<int> CountAsync()
+        {
+            return await _dbSet.CountAsync();
+        }
+
+        public async Task<int> CountAsync(Expression<Func<T, bool>> predicate)
+        {
             return await _dbSet.CountAsync(predicate);
         }
 
-        public async Task<bool> ExistsAsync(Expression<Func<T, bool>> predicate)
+        public async Task<List<T>> ToListAsync(IQueryable<T> query)
         {
-            return await _dbSet.AnyAsync(predicate);
-        }
-
-        public IQueryable<T> Query()
-        {
-            return _dbSet.AsQueryable();
+            return await query.ToListAsync();
         }
     }
 }

@@ -5,125 +5,75 @@ namespace SistemaPermisos.Data
 {
     public class ApplicationDbContext : DbContext
     {
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+            : base(options)
         {
         }
 
-        public DbSet<Usuario> Usuarios => Set<Usuario>();
-        public DbSet<Permiso> Permisos => Set<Permiso>();
-        public DbSet<OmisionMarca> OmisionesMarca => Set<OmisionMarca>();
-        public DbSet<ReporteDano> ReportesDanos => Set<ReporteDano>();
-        public DbSet<ReporteDano> ReportesDano => Set<ReporteDano>();
-        public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
-        public DbSet<UserPermission> UserPermissions => Set<UserPermission>();
-        public DbSet<PasswordReset> PasswordResets => Set<PasswordReset>();
-        public DbSet<TwoFactorAuth> TwoFactorAuth => Set<TwoFactorAuth>();
+        public DbSet<Usuario> Usuarios { get; set; } = null!;
+        public DbSet<Permiso> Permisos { get; set; } = null!;
+        public DbSet<OmisionMarca> OmisionesMarca { get; set; } = null!;
+        public DbSet<ReporteDano> ReportesDano { get; set; } = null!;
+        public DbSet<AuditLog> AuditLogs { get; set; } = null!;
+        public DbSet<UserPermission> UserPermissions { get; set; } = null!;
+        public DbSet<PasswordReset> PasswordResets { get; set; } = null!;
+        public DbSet<TwoFactorAuth> TwoFactorAuths { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            // Configuración de Usuario
-            modelBuilder.Entity<Usuario>(entity =>
-            {
-                entity.HasKey(e => e.Id);
-                entity.HasIndex(e => e.Correo).IsUnique();
-                entity.Property(e => e.Nombre).IsRequired().HasMaxLength(100);
-                entity.Property(e => e.Correo).IsRequired().HasMaxLength(100);
-                entity.Property(e => e.Password).IsRequired();
-                entity.Property(e => e.Rol).IsRequired().HasMaxLength(50);
-            });
+            // Configure relationships
+            modelBuilder.Entity<Permiso>()
+                .HasOne(p => p.Usuario)
+                .WithMany(u => u.PermisosSolicitados)
+                .HasForeignKey(p => p.UsuarioId)
+                .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete
 
-            // Configuración de Permiso
-            modelBuilder.Entity<Permiso>(entity =>
-            {
-                entity.HasKey(e => e.Id);
-                entity.HasOne(e => e.Usuario)
-                      .WithMany()
-                      .HasForeignKey(e => e.UsuarioId)
-                      .OnDelete(DeleteBehavior.Restrict);
-                entity.Property(e => e.TipoPermiso).IsRequired().HasMaxLength(50);
-                entity.Property(e => e.Motivo).IsRequired().HasMaxLength(500);
-                entity.Property(e => e.Estado).IsRequired().HasMaxLength(20);
-            });
+            modelBuilder.Entity<Permiso>()
+                .HasOne(p => p.AprobadoPor)
+                .WithMany()
+                .HasForeignKey(p => p.AprobadoPorId)
+                .OnDelete(DeleteBehavior.SetNull); // Set null if approver is deleted
 
-            // Configuración de OmisionMarca
-            modelBuilder.Entity<OmisionMarca>(entity =>
-            {
-                entity.HasKey(e => e.Id);
-                entity.HasOne(e => e.Usuario)
-                      .WithMany()
-                      .HasForeignKey(e => e.UsuarioId)
-                      .OnDelete(DeleteBehavior.Restrict);
-                entity.Property(e => e.TipoOmision).IsRequired().HasMaxLength(50);
-                entity.Property(e => e.Justificacion).IsRequired().HasMaxLength(500);
-                entity.Property(e => e.Estado).IsRequired().HasMaxLength(20);
-            });
+            modelBuilder.Entity<OmisionMarca>()
+                .HasOne(o => o.Usuario)
+                .WithMany(u => u.OmisionesSolicitadas)
+                .HasForeignKey(o => o.UsuarioId)
+                .OnDelete(DeleteBehavior.Restrict);
 
-            // Configuración de ReporteDano
-            modelBuilder.Entity<ReporteDano>(entity =>
-            {
-                entity.HasKey(e => e.Id);
-                entity.HasOne(e => e.Usuario)
-                      .WithMany()
-                      .HasForeignKey(e => e.UsuarioId)
-                      .OnDelete(DeleteBehavior.Restrict);
-                entity.Property(e => e.TipoDano).IsRequired().HasMaxLength(100);
-                entity.Property(e => e.Descripcion).IsRequired().HasMaxLength(1000);
-                entity.Property(e => e.Ubicacion).IsRequired().HasMaxLength(200);
-                entity.Property(e => e.Estado).IsRequired().HasMaxLength(20);
-            });
+            modelBuilder.Entity<OmisionMarca>()
+                .HasOne(o => o.AprobadoPor)
+                .WithMany()
+                .HasForeignKey(o => o.AprobadoPorId)
+                .OnDelete(DeleteBehavior.SetNull);
 
-            // Configuración de AuditLog
-            modelBuilder.Entity<AuditLog>(entity =>
-            {
-                entity.HasKey(e => e.Id);
-                entity.HasOne(e => e.Usuario)
-                      .WithMany()
-                      .HasForeignKey(e => e.UsuarioId)
-                      .OnDelete(DeleteBehavior.SetNull);
-                entity.Property(e => e.Accion).IsRequired().HasMaxLength(50);
-                entity.Property(e => e.Entidad).IsRequired().HasMaxLength(50);
-                entity.Property(e => e.DireccionIP).HasMaxLength(45);
-                entity.Property(e => e.Descripcion).HasMaxLength(1000);
-                entity.HasIndex(e => e.Fecha);
-            });
+            modelBuilder.Entity<ReporteDano>()
+                .HasOne(r => r.Usuario)
+                .WithMany(u => u.ReportesCreados)
+                .HasForeignKey(r => r.UsuarioId)
+                .OnDelete(DeleteBehavior.Restrict);
 
-            // Configuración de UserPermission
-            modelBuilder.Entity<UserPermission>(entity =>
-            {
-                entity.HasKey(e => e.Id);
-                entity.HasOne(e => e.Usuario)
-                      .WithMany(u => u.UserPermissions)
-                      .HasForeignKey(e => e.UsuarioId)
-                      .OnDelete(DeleteBehavior.Cascade);
-                entity.Property(e => e.Permiso).IsRequired().HasMaxLength(100);
-                entity.HasIndex(e => new { e.UsuarioId, e.Permiso }).IsUnique();
-            });
+            modelBuilder.Entity<ReporteDano>()
+                .HasOne(r => r.ResueltoPor)
+                .WithMany()
+                .HasForeignKey(r => r.ResueltoPorId)
+                .OnDelete(DeleteBehavior.SetNull);
 
-            // Configuración de PasswordReset
-            modelBuilder.Entity<PasswordReset>(entity =>
-            {
-                entity.HasKey(e => e.Id);
-                entity.HasOne(e => e.Usuario)
-                      .WithMany()
-                      .HasForeignKey(e => e.UsuarioId)
-                      .OnDelete(DeleteBehavior.Cascade);
-                entity.Property(e => e.Token).IsRequired().HasMaxLength(255);
-                entity.HasIndex(e => e.Token).IsUnique();
-            });
+            modelBuilder.Entity<AuditLog>()
+                .HasOne(al => al.Usuario)
+                .WithMany(u => u.AuditLogs)
+                .HasForeignKey(al => al.UsuarioId)
+                .OnDelete(DeleteBehavior.Restrict);
 
-            // Configuración de TwoFactorAuth
-            modelBuilder.Entity<TwoFactorAuth>(entity =>
-            {
-                entity.HasKey(e => e.Id);
-                entity.HasOne(e => e.Usuario)
-                      .WithMany()
-                      .HasForeignKey(e => e.UsuarioId)
-                      .OnDelete(DeleteBehavior.Cascade);
-                entity.Property(e => e.Codigo).IsRequired().HasMaxLength(10);
-                entity.Property(e => e.Tipo).IsRequired().HasMaxLength(20);
-            });
+            // Ensure unique constraints for Email and NombreUsuario
+            modelBuilder.Entity<Usuario>()
+                .HasIndex(u => u.Email)
+                .IsUnique();
+
+            modelBuilder.Entity<Usuario>()
+                .HasIndex(u => u.NombreUsuario)
+                .IsUnique();
         }
     }
 }

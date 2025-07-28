@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SistemaPermisos.Models
@@ -9,24 +10,19 @@ namespace SistemaPermisos.Models
         public int Id { get; set; }
 
         [Required]
-        public int UsuarioId { get; set; }
+        public int UserId { get; set; }
+
+        [ForeignKey("UserId")]
+        public virtual Usuario User { get; set; } = null!;
 
         [Required]
         [StringLength(10)]
-        public string Codigo { get; set; } = string.Empty;
+        public string Code { get; set; } = string.Empty; // The 2FA code
 
         [Required]
-        [StringLength(20)]
-        public string Tipo { get; set; } = string.Empty; // SMS, Email
+        public DateTime ExpirationDate { get; set; } // When the code expires
 
-        public DateTime FechaCreacion { get; set; } = DateTime.Now;
-
-        public DateTime FechaExpiracion { get; set; }
-
-        public bool Usado { get; set; } = false;
-
-        // Navegación
-        [ForeignKey("UsuarioId")]
-        public virtual Usuario Usuario { get; set; } = null!;
+        [Required]
+        public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
     }
 }

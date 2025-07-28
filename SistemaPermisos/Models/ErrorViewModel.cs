@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace SistemaPermisos.Models
 {
     public class ErrorViewModel

@@ -1,115 +1,59 @@
+using MailKit.Net.Smtp;
+using MailKit.Security;
+using MimeKit;
 using Microsoft.Extensions.Configuration;
 using System;
-using System.Net;
-using System.Net.Mail;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace SistemaPermisos.Services
 {
     public class EmailService : IEmailService
     {
         private readonly IConfiguration _configuration;
-        private readonly string _smtpServer;
-        private readonly int _smtpPort;
-        private readonly string _smtpUsername;
-        private readonly string _smtpPassword;
-        private readonly string _fromEmail;
-        private readonly string _fromName;
-        private readonly bool _enableSsl;
+        private readonly ILogger<EmailService> _logger;
 
-        public EmailService(IConfiguration configuration)
+        public EmailService(IConfiguration configuration, ILogger<EmailService> logger)
         {
             _configuration = configuration;
-
-            // Corregir las rutas de configuración para que coincidan con appsettings.json
-            _smtpServer = _configuration["EmailSettings:SmtpServer"] ?? "smtp.gmail.com";
-            _smtpPort = int.Parse(_configuration["EmailSettings:SmtpPort"] ?? "587");
-            _smtpUsername = _configuration["EmailSettings:SmtpUsername"] ?? "";
-            _smtpPassword = _configuration["EmailSettings:SmtpPassword"] ?? "";
-            _fromEmail = _configuration["EmailSettings:SenderEmail"] ?? "";
-            _fromName = _configuration["EmailSettings:SenderName"] ?? "MIPP+";
-            _enableSsl = bool.Parse(_configuration["EmailSettings:EnableSsl"] ?? "true");
+            _logger = logger;
         }
 
-        public async Task<bool> SendEmailAsync(string to, string subject, string body, bool isHtml = true)
+        public async Task<bool> SendEmailAsync(string toEmail, string subject, string message)
         {
             try
             {
-                // Validar que los campos requeridos no estén vacíos
-                if (string.IsNullOrEmpty(_smtpServer) || string.IsNullOrEmpty(_fromEmail))
+                var email = new MimeMessage();
+                email.From.Add(MailboxAddress.Parse(_configuration["EmailSettings:SenderEmail"]));
+                email.To.Add(MailboxAddress.Parse(toEmail));
+                email.Subject = subject;
+                email.Body = new TextPart(MimeKit.Text.TextFormat.Html) { Text = message };
+
+                using (var smtp = new MailKit.Net.Smtp.SmtpClient())
                 {
-                    System.Diagnostics.Debug.WriteLine("Configuración de email incompleta");
-                    return false;
+                    await smtp.ConnectAsync(_configuration["EmailSettings:SmtpServer"], int.Parse(_configuration["EmailSettings:SmtpPort"]!), MailKit.Security.SecureSocketOptions.StartTls);
+                    await smtp.AuthenticateAsync(_configuration["EmailSettings:SenderEmail"], _configuration["EmailSettings:SenderPassword"]);
+                    await smtp.SendAsync(email);
+                    await smtp.DisconnectAsync(true);
                 }
-
-                var message = new MailMessage
-                {
-                    From = new MailAddress(_fromEmail, _fromName),
-                    Subject = subject,
-                    Body = body,
-                    IsBodyHtml = isHtml
-                };
-
-                message.To.Add(new MailAddress(to));
-
-                using (var client = new SmtpClient(_smtpServer, _smtpPort))
-                {
-                    client.EnableSsl = _enableSsl;
-                    if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-                    {
-                        client.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-                    }
-                    await client.SendMailAsync(message);
-                }
-
+                _logger.LogInformation("Email sent successfully to {ToEmail}", toEmail);
                 return true;
             }
             catch (Exception ex)
             {
-                // Registrar el error
-                System.Diagnostics.Debug.WriteLine($"Error al enviar correo: {ex.Message}");
+                _logger.LogError(ex, "Error sending email to {ToEmail}", toEmail);
                 return false;
             }
         }
 
-        public async Task<bool> SendPasswordResetEmailAsync(string to, string resetLink)
+        public async Task<bool> SendPasswordResetEmailAsync(string toEmail, string resetLink)
         {
-            string subject = "Restablecimiento de Contraseña - MIPP+";
-            string body = $@"
-                <html>
-                <head>
-                    <style>
-                        body {{ font-family: Arial, sans-serif; line-height: 1.6; }}
-                        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-                        .header {{ background-color: #f8f9fa; padding: 10px; text-align: center; }}
-                        .content {{ padding: 20px; }}
-                        .button {{ display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; }}
-                        .footer {{ background-color: #f8f9fa; padding: 10px; text-align: center; font-size: 12px; }}
-                    </style>
-                </head>
-                <body>
-                    <div class='container'>
-                        <div class='header'>
-                            <h2>Restablecimiento de Contraseña - MIPP+</h2>
-                        </div>
-                        <div class='content'>
-                            <p>Hemos recibido una solicitud para restablecer la contraseña de su cuenta en MIPP+.</p>
-                            <p>Para continuar con el proceso, haga clic en el siguiente enlace:</p>
-                            <p><a href='{resetLink}' class='button'>Restablecer Contraseña</a></p>
-                            <p>Si no solicitó restablecer su contraseña, puede ignorar este correo.</p>
-                            <p>El enlace expirará en 24 horas.</p>
-                        </div>
-                        <div class='footer'>
-                            <p>Este es un correo automático de MIPP+, por favor no responda a este mensaje.</p>
-                        </div>
-                    </div>
-                </body>
-                </html>";
-
-            return await SendEmailAsync(to, subject, body);
+            string subject = "Restablecer su contraseña - Sistema de Permisos";
+            string message = $"Por favor, restablezca su contraseña haciendo clic en este enlace: <a href='{resetLink}'>Restablecer Contraseña</a>";
+            return await SendEmailAsync(toEmail, subject, message);
         }
 
-        public async Task<bool> SendWelcomeEmailAsync(string to, string userName)
+        public async Task<bool> SendWelcomeEmailAsync(string toEmail, string userName)
         {
             string subject = "Bienvenido a MIPP+";
             string body = $@"
@@ -141,10 +85,10 @@ namespace SistemaPermisos.Services
                 </body>
                 </html>";
 
-            return await SendEmailAsync(to, subject, body);
+            return await SendEmailAsync(toEmail, subject, body);
         }
 
-        public async Task<bool> SendNotificationAsync(string to, string subject, string message)
+        public async Task<bool> SendNotificationAsync(string toEmail, string subject, string message)
         {
             string body = $@"
                 <html>
@@ -173,10 +117,10 @@ namespace SistemaPermisos.Services
                 </body>
                 </html>";
 
-            return await SendEmailAsync(to, subject, body);
+            return await SendEmailAsync(toEmail, subject, body);
         }
 
-        public async Task<bool> Send2FACodeAsync(string to, string code)
+        public async Task<bool> Send2FACodeAsync(string toEmail, string code)
         {
             string subject = "Código de Verificación - MIPP+";
             string body = $@"
@@ -209,7 +153,7 @@ namespace SistemaPermisos.Services
                 </body>
                 </html>";
 
-            return await SendEmailAsync(to, subject, body);
+            return await SendEmailAsync(toEmail, subject, body);
         }
     }
 }

@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using SistemaPermisos.Data;
 using SistemaPermisos.Models;
@@ -6,7 +6,6 @@ using SistemaPermisos.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Threading.Tasks;
 
 namespace SistemaPermisos.Services
@@ -14,685 +13,416 @@ namespace SistemaPermisos.Services
     public class UserService : IUserService
     {
         private readonly ApplicationDbContext _context;
+        private readonly PasswordHasher<Usuario> _passwordHasher;
         private readonly IAuditService _auditService;
-        private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IEmailService _emailService;
 
-        public UserService(ApplicationDbContext context, IAuditService auditService, IHttpContextAccessor httpContextAccessor)
+        public UserService(ApplicationDbContext context, IAuditService auditService, IEmailService emailService)
         {
-            _context = context ?? throw new ArgumentNullException(nameof(context));
-            _auditService = auditService ?? throw new ArgumentNullException(nameof(auditService));
-            _httpContextAccessor = httpContextAccessor;
+            _context = context;
+            _passwordHasher = new PasswordHasher<Usuario>();
+            _auditService = auditService;
+            _emailService = emailService;
         }
 
-        public async Task<IEnumerable<Usuario>> GetAllUsersAsync()
+        public async Task<Usuario?> GetUserById(int id)
         {
-            return await _context.Usuarios
-                .Include(u => u.UserPermissions)
-                .ToListAsync();
+            return await _context.Usuarios.FindAsync(id);
         }
 
-        public async Task<Usuario?> GetByIdAsync(int id)
+        public async Task<Usuario?> GetUserByEmail(string email)
         {
-            return await _context.Usuarios
-                .Include(u => u.UserPermissions)
-                .FirstOrDefaultAsync(u => u.Id == id);
+            return await _context.Usuarios.FirstOrDefaultAsync(u => u.Email == email);
         }
 
-        public async Task<Usuario?> GetUserByIdAsync(int id)
+        public async Task<Usuario?> GetUserByUsername(string username)
         {
-            return await _context.Usuarios
-                .Include(u => u.UserPermissions)
-                .FirstOrDefaultAsync(u => u.Id == id);
+            return await _context.Usuarios.FirstOrDefaultAsync(u => u.NombreUsuario == username);
         }
 
-        public async Task<Usuario?> GetByEmailAsync(string email)
+        public async Task<PaginatedList<Usuario>> GetPaginatedUsers(int pageNumber, int pageSize, string? searchString, string? currentFilter)
         {
-            if (string.IsNullOrWhiteSpace(email))
-                return null;
+            var users = from u in _context.Usuarios select u;
 
-            return await _context.Usuarios
-                .Include(u => u.UserPermissions)
-                .FirstOrDefaultAsync(u => u.Correo.ToLower() == email.ToLower());
+            if (!string.IsNullOrEmpty(searchString))
+            {
+                users = users.Where(u => u.Nombre.Contains(searchString) ||
+                                         u.Apellidos!.Contains(searchString) ||
+                                         u.Email.Contains(searchString) ||
+                                         u.NombreUsuario.Contains(searchString) ||
+                                         u.Rol.Contains(searchString));
+            }
+
+            users = users.OrderBy(u => u.Nombre);
+
+            return await PaginatedList<Usuario>.CreateAsync(users.AsNoTracking(), pageNumber, pageSize);
         }
 
-        public async Task<Usuario?> GetUserByEmailAsync(string email)
+        public async Task<ServiceResult> CreateUser(UserCreateViewModel model)
         {
-            if (string.IsNullOrWhiteSpace(email))
-                return null;
+            if (await _context.Usuarios.AnyAsync(u => u.Email == model.Email))
+            {
+                return ServiceResult.ErrorResult("El correo electrónico ya está registrado.");
+            }
+            if (await _context.Usuarios.AnyAsync(u => u.NombreUsuario == model.NombreUsuario))
+            {
+                return ServiceResult.ErrorResult("El nombre de usuario ya está en uso.");
+            }
 
-            return await _context.Usuarios
-                .Include(u => u.UserPermissions)
-                .FirstOrDefaultAsync(u => u.Correo.ToLower() == email.ToLower());
-        }
+            var user = new Usuario
+            {
+                Nombre = model.Nombre,
+                Apellidos = model.Apellidos,
+                NombreUsuario = model.NombreUsuario,
+                Email = model.Email,
+                Rol = model.Rol,
+                Cedula = model.Cedula,
+                Puesto = model.Puesto,
+                Telefono = model.Telefono,
+                Departamento = model.Departamento,
+                Direccion = model.Direccion,
+                FechaNacimiento = model.FechaNacimiento,
+                IsActive = model.Activo,
+                FechaRegistro = DateTime.Now,
+                UltimaActualizacion = DateTime.Now,
+                EmailConfirmed = false // Email needs to be confirmed
+            };
 
-        public async Task<IEnumerable<Usuario>> FindAsync(Func<Usuario, bool> predicate)
-        {
-            var users = await _context.Usuarios
-                .Include(u => u.UserPermissions)
-                .ToListAsync();
+            user.PasswordHash = _passwordHasher.HashPassword(user, model.Password);
 
-            return users.Where(predicate);
-        }
-
-        public async Task<Usuario> CreateAsync(Usuario usuario)
-        {
-            if (usuario == null)
-                throw new ArgumentNullException(nameof(usuario));
-
-            // Verificar si el correo ya existe
-            var existingUser = await GetUserByEmailAsync(usuario.Correo);
-            if (existingUser != null)
-                throw new InvalidOperationException("Ya existe un usuario con este correo electrónico");
-
-            // Encriptar la contraseña
-            usuario.Password = BCrypt.Net.BCrypt.HashPassword(usuario.Password);
-            usuario.FechaRegistro = DateTime.Now;
-            usuario.UltimaActualizacion = DateTime.Now;
-
-            _context.Usuarios.Add(usuario);
+            _context.Usuarios.Add(user);
             await _context.SaveChangesAsync();
 
-            await _auditService.LogAsync("CREATE", "Usuarios", usuario.Id, null,
-                $"Usuario creado: {usuario.Nombre} ({usuario.Correo})");
-
-            return usuario;
+            await _auditService.LogAction(user.Id, "Creación de Usuario", $"Usuario {user.NombreUsuario} creado por un administrador.");
+            return ServiceResult.SuccessResult("Usuario creado exitosamente.");
         }
 
-        public async Task<bool> CreateUserAsync(UserCreateViewModel model)
+        public async Task<ServiceResult> UpdateUser(UserEditViewModel model)
         {
-            try
+            var user = await _context.Usuarios.FindAsync(model.Id);
+            if (user == null)
             {
-                var user = new Usuario
-                {
-                    Nombre = model.Nombre,
-                    Correo = model.Correo,
-                    Rol = model.Rol,
-                    Cedula = model.Cedula,
-                    Puesto = model.Puesto,
-                    Telefono = model.Telefono,
-                    Departamento = model.Departamento,
-                    Password = BCrypt.Net.BCrypt.HashPassword(model.Password),
-                    FechaRegistro = DateTime.Now,
-                    UltimaActualizacion = DateTime.Now,
-                    Activo = true
-                };
-
-                _context.Usuarios.Add(user);
-                await _context.SaveChangesAsync();
-
-                await _auditService.LogAsync("CREATE", "Usuarios", user.Id, null,
-                    $"Usuario creado: {user.Nombre} ({user.Correo})");
-
-                return true;
+                return ServiceResult.ErrorResult("Usuario no encontrado.");
             }
-            catch
+
+            // Check if email or username is being changed to an existing one by another user
+            if (await _context.Usuarios.AnyAsync(u => u.Email == model.Email && u.Id != model.Id))
             {
-                return false;
+                return ServiceResult.ErrorResult("El correo electrónico ya está registrado por otro usuario.");
             }
-        }
-
-        public async Task<Usuario> UpdateAsync(Usuario usuario)
-        {
-            if (usuario == null)
-                throw new ArgumentNullException(nameof(usuario));
-
-            var existingUser = await GetUserByIdAsync(usuario.Id);
-            if (existingUser == null)
-                throw new InvalidOperationException("Usuario no encontrado");
-
-            var oldData = $"Nombre: {existingUser.Nombre}, Correo: {existingUser.Correo}, Rol: {existingUser.Rol}";
-
-            existingUser.Nombre = usuario.Nombre;
-            existingUser.Correo = usuario.Correo;
-            existingUser.Rol = usuario.Rol;
-            existingUser.Cedula = usuario.Cedula;
-            existingUser.Puesto = usuario.Puesto;
-            existingUser.Telefono = usuario.Telefono;
-            existingUser.Departamento = usuario.Departamento;
-            existingUser.FechaNacimiento = usuario.FechaNacimiento;
-            existingUser.Direccion = usuario.Direccion;
-            existingUser.FotoPerfil = usuario.FotoPerfil;
-            existingUser.Activo = usuario.Activo;
-            existingUser.UltimaActualizacion = DateTime.Now;
-
-            _context.Usuarios.Update(existingUser);
-            await _context.SaveChangesAsync();
-
-            var newData = $"Nombre: {existingUser.Nombre}, Correo: {existingUser.Correo}, Rol: {existingUser.Rol}";
-            await _auditService.LogAsync("UPDATE", "Usuarios", existingUser.Id, oldData, newData);
-
-            return existingUser;
-        }
-
-        public async Task<bool> UpdateUserAsync(UserEditViewModel model)
-        {
-            try
+            if (await _context.Usuarios.AnyAsync(u => u.NombreUsuario == model.NombreUsuario && u.Id != model.Id))
             {
-                var user = await _context.Usuarios.FindAsync(model.Id);
-                if (user == null)
-                    return false;
+                return ServiceResult.ErrorResult("El nombre de usuario ya está en uso por otro usuario.");
+            }
 
-                var oldData = $"Nombre: {user.Nombre}, Correo: {user.Correo}, Rol: {user.Rol}";
+            user.Nombre = model.Nombre;
+            user.Apellidos = model.Apellidos;
+            user.NombreUsuario = model.NombreUsuario;
+            user.Email = model.Email;
+            user.Rol = model.Rol;
+            user.Cedula = model.Cedula;
+            user.Puesto = model.Puesto;
+            user.Telefono = model.Telefono;
+            user.Departamento = model.Departamento;
+            user.Direccion = model.Direccion;
+            user.FechaNacimiento = model.FechaNacimiento;
+            user.IsActive = model.Activo;
+            user.UltimaActualizacion = DateTime.Now;
 
-                user.Nombre = model.Nombre;
-                user.Correo = model.Correo;
-                user.Cedula = model.Cedula;
-                user.Puesto = model.Puesto;
-                user.Telefono = model.Telefono;
-                user.Departamento = model.Departamento;
-                user.Direccion = model.Direccion;
-                user.Rol = model.Rol;
-                user.Activo = model.Activo;
-                user.UltimaActualizacion = DateTime.Now;
-
-                if (!string.IsNullOrEmpty(model.NewPassword))
+            if (!string.IsNullOrEmpty(model.NewPassword))
+            {
+                if (model.NewPassword != model.ConfirmNewPassword)
                 {
-                    user.Password = BCrypt.Net.BCrypt.HashPassword(model.NewPassword);
+                    return ServiceResult.ErrorResult("Las nuevas contraseñas no coinciden.");
+                }
+                user.PasswordHash = _passwordHasher.HashPassword(user, model.NewPassword);
+            }
+
+            // Handle profile picture upload
+            if (model.NuevaFotoPerfil != null)
+            {
+                // In a real application, you would save the file to a storage (e.g., wwwroot/images/profiles)
+                // and store the path in user.FotoPerfilUrl.
+                // For simplicity, let's just simulate storing the path.
+                var fileName = $"{user.Id}_{Guid.NewGuid().ToString()}_{model.NuevaFotoPerfil.FileName}";
+                var filePath = Path.Combine("wwwroot", "images", "profiles", fileName);
+                var directoryPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "profiles");
+
+                if (!Directory.Exists(directoryPath))
+                {
+                    Directory.CreateDirectory(directoryPath);
                 }
 
-                _context.Usuarios.Update(user);
-                await _context.SaveChangesAsync();
-
-                var newData = $"Nombre: {user.Nombre}, Correo: {user.Correo}, Rol: {user.Rol}";
-                await _auditService.LogAsync("UPDATE", "Usuarios", user.Id, oldData, newData);
-
-                return true;
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await model.NuevaFotoPerfil.CopyToAsync(stream);
+                }
+                user.FotoPerfilUrl = $"/images/profiles/{fileName}";
             }
-            catch
+            else if (model.FotoPerfilActual == null && user.FotoPerfilUrl != null)
             {
-                return false;
+                // If FotoPerfilActual is null and user had a photo, it means it was removed
+                var oldFilePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", user.FotoPerfilUrl.TrimStart('/'));
+                if (File.Exists(oldFilePath))
+                {
+                    File.Delete(oldFilePath);
+                }
+                user.FotoPerfilUrl = null;
             }
+
+
+            _context.Usuarios.Update(user);
+            await _context.SaveChangesAsync();
+
+            await _auditService.LogAction(user.Id, "Actualización de Usuario", $"Perfil de usuario {user.NombreUsuario} actualizado.");
+            return ServiceResult.SuccessResult("Usuario actualizado exitosamente.");
         }
 
-        public async Task<bool> DeleteAsync(int id)
+        public async Task<ServiceResult> DeleteUser(int id)
         {
             var user = await _context.Usuarios.FindAsync(id);
             if (user == null)
-                return false;
-
-            var userData = $"Usuario eliminado: {user.Nombre} ({user.Correo})";
+            {
+                return ServiceResult.ErrorResult("Usuario no encontrado.");
+            }
 
             _context.Usuarios.Remove(user);
             await _context.SaveChangesAsync();
 
-            await _auditService.LogAsync("DELETE", "Usuarios", id, userData, null);
-
-            return true;
+            await _auditService.LogAction(user.Id, "Eliminación de Usuario", $"Usuario {user.NombreUsuario} eliminado.");
+            return ServiceResult.SuccessResult("Usuario eliminado exitosamente.");
         }
 
-        public async Task<bool> DeleteUserAsync(int id)
+        public async Task<ServiceResult> ChangeUserRole(ChangeRoleViewModel model)
         {
-            return await DeleteAsync(id);
-        }
-
-        public async Task<bool> ChangeRoleAsync(int userId, string newRole)
-        {
-            if (string.IsNullOrWhiteSpace(newRole))
-                return false;
-
-            var usuario = await GetUserByIdAsync(userId);
-            if (usuario == null)
-                return false;
-
-            var oldRole = usuario.Rol;
-            usuario.Rol = newRole;
-            usuario.UltimaActualizacion = DateTime.Now;
-
-            _context.Usuarios.Update(usuario);
-            await _context.SaveChangesAsync();
-
-            await _auditService.LogAsync("UPDATE", "Usuarios", userId,
-                $"Rol anterior: {oldRole}", $"Nuevo rol: {newRole}");
-
-            return true;
-        }
-
-        public async Task<bool> ChangeUserRoleAsync(int userId, string newRole)
-        {
-            return await ChangeRoleAsync(userId, newRole);
-        }
-
-        public async Task<bool> ChangeUserRoleAsync(ChangeRoleViewModel model)
-        {
-            return await ChangeRoleAsync(model.UsuarioId, model.NuevoRol);
-        }
-
-        public async Task<bool> ValidatePasswordAsync(int userId, string password)
-        {
-            var user = await _context.Usuarios.FindAsync(userId);
+            var user = await _context.Usuarios.FindAsync(model.UserId);
             if (user == null)
-                return false;
-
-            return BCrypt.Net.BCrypt.Verify(password, user.Password);
-        }
-
-        public async Task<bool> ValidateUserAsync(string email, string password)
-        {
-            var user = await GetUserByEmailAsync(email);
-            if (user == null)
-                return false;
-
-            return BCrypt.Net.BCrypt.Verify(password, user.Password);
-        }
-
-        public async Task<bool> AuthenticateAsync(string email, string password)
-        {
-            try
             {
-                var usuario = await GetUserByEmailAsync(email);
-                if (usuario == null || !usuario.Activo)
-                {
-                    return false;
-                }
-
-                // Verificar la contraseña
-                if (!BCrypt.Net.BCrypt.Verify(password, usuario.Password))
-                {
-                    return false;
-                }
-
-                // Guardar información del usuario en la sesión
-                _httpContextAccessor.HttpContext?.Session.SetString("UsuarioId", usuario.Id.ToString());
-                _httpContextAccessor.HttpContext?.Session.SetString("UsuarioNombre", usuario.Nombre);
-                _httpContextAccessor.HttpContext?.Session.SetString("UsuarioRol", usuario.Rol);
-                _httpContextAccessor.HttpContext?.Session.SetString("UsuarioCorreo", usuario.Correo);
-
-                await _auditService.LogAsync("LOGIN", "Usuarios", usuario.Id, null, "Inicio de sesión exitoso");
-                return true;
+                return ServiceResult.ErrorResult("Usuario no encontrado.");
             }
-            catch (Exception ex)
+
+            if (!await _context.UserPermissions.AnyAsync(p => p.PermissionName == model.NewRole))
             {
-                // Registrar la excepción
-                System.Diagnostics.Debug.WriteLine($"Error al autenticar: {ex.Message}");
-                return false;
+                return ServiceResult.ErrorResult("El rol especificado no existe.");
             }
-        }
 
-        public void Logout()
-        {
-            try
-            {
-                var usuarioIdString = _httpContextAccessor.HttpContext?.Session.GetString("UsuarioId");
-                int? usuarioId = null;
-
-                if (!string.IsNullOrEmpty(usuarioIdString) && int.TryParse(usuarioIdString, out int id))
-                {
-                    usuarioId = id;
-                }
-
-                // Registrar la actividad antes de cerrar la sesión
-                if (usuarioId.HasValue)
-                {
-                    _auditService.LogAsync("LOGOUT", "Usuarios", usuarioId.Value, null, "Cierre de sesión").Wait();
-                }
-
-                // Limpiar la sesión
-                _httpContextAccessor.HttpContext?.Session.Clear();
-            }
-            catch (Exception ex)
-            {
-                // Registrar la excepción
-                System.Diagnostics.Debug.WriteLine($"Error al cerrar sesión: {ex.Message}");
-            }
-        }
-
-        public async Task<bool> ResetPasswordAsync(int userId, string newPassword)
-        {
-            var user = await _context.Usuarios.FindAsync(userId);
-            if (user == null)
-                return false;
-
-            // Encriptar la contraseña
-            user.Password = BCrypt.Net.BCrypt.HashPassword(newPassword);
+            string oldRole = user.Rol;
+            user.Rol = model.NewRole;
             user.UltimaActualizacion = DateTime.Now;
 
             _context.Usuarios.Update(user);
             await _context.SaveChangesAsync();
 
-            await _auditService.LogAsync("UPDATE", "Usuarios", user.Id, null,
-                "Contraseña restablecida");
-
-            return true;
+            await _auditService.LogAction(user.Id, "Cambio de Rol", $"Rol de usuario {user.NombreUsuario} cambiado de {oldRole} a {model.NewRole}.");
+            return ServiceResult.SuccessResult($"Rol de usuario cambiado a {model.NewRole} exitosamente.");
         }
 
-        public async Task<bool> CreatePasswordResetTokenAsync(string email)
+        public async Task<ServiceResult> ChangePassword(int userId, ChangePasswordViewModel model)
         {
-            var user = await GetUserByEmailAsync(email);
-            if (user == null)
-                return false;
-
-            // Generar token único
-            var token = Guid.NewGuid().ToString("N");
-
-            // Guardar token en la base de datos
-            var passwordReset = new PasswordReset
-            {
-                UsuarioId = user.Id,
-                Token = token,
-                FechaExpiracion = DateTime.Now.AddHours(24), // Expira en 24 horas
-                Utilizado = false
-            };
-
-            _context.PasswordResets.Add(passwordReset);
-            await _context.SaveChangesAsync();
-
-            return true;
-        }
-
-        public async Task<bool> InitiatePasswordResetAsync(string email)
-        {
-            var user = await GetUserByEmailAsync(email);
+            var user = await _context.Usuarios.FindAsync(userId);
             if (user == null)
             {
-                return false;
+                return ServiceResult.ErrorResult("Usuario no encontrado.");
             }
 
-            // Generar token único
-            string token = GenerateRandomToken();
-
-            // Guardar token en la base de datos
-            var passwordReset = new PasswordReset
+            var passwordVerificationResult = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, model.CurrentPassword);
+            if (passwordVerificationResult == PasswordVerificationResult.Failed)
             {
-                UsuarioId = user.Id,
-                Token = token,
-                FechaExpiracion = DateTime.Now.AddHours(24), // Expira en 24 horas
-                Utilizado = false
-            };
+                return ServiceResult.ErrorResult("La contraseña actual es incorrecta.");
+            }
 
-            _context.PasswordResets.Add(passwordReset);
+            if (model.NewPassword != model.ConfirmNewPassword)
+            {
+                return ServiceResult.ErrorResult("La nueva contraseña y la confirmación de contraseña no coinciden.");
+            }
+
+            user.PasswordHash = _passwordHasher.HashPassword(user, model.NewPassword);
+            user.UltimaActualizacion = DateTime.Now;
+
+            _context.Usuarios.Update(user);
             await _context.SaveChangesAsync();
 
-            // Registrar en auditoría
-            await _auditService.LogAsync("CREATE", "PasswordResets", user.Id, null,
-                $"Token generado para {user.Correo}");
-
-            return true;
+            await _auditService.LogAction(user.Id, "Cambio de Contraseña", $"Contraseña de usuario {user.NombreUsuario} cambiada.");
+            return ServiceResult.SuccessResult("Contraseña cambiada exitosamente.");
         }
 
-        public async Task<(bool isValid, int userId)> ValidatePasswordResetTokenAsync(string token)
+        public async Task<ServiceResult> ForgotPassword(ForgotPasswordViewModel model)
         {
-            try
+            var user = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email == model.Email);
+            if (user == null || !user.IsActive)
             {
-                var passwordReset = await _context.PasswordResets
-                    .FirstOrDefaultAsync(pr => pr.Token == token && !pr.Utilizado && pr.FechaExpiracion > DateTime.Now);
-
-                if (passwordReset == null)
-                {
-                    return (false, 0);
-                }
-
-                return (true, passwordReset.UsuarioId);
+                // Don't reveal that the user does not exist or is not confirmed
+                return ServiceResult.SuccessResult("Si su cuenta existe y está activa, se le ha enviado un correo electrónico con instrucciones para restablecer su contraseña.");
             }
-            catch (Exception ex)
+
+            var token = await GeneratePasswordResetTokenAsync(user);
+            var resetLink = $"https://localhost:5001/Account/ResetPassword?token={Uri.EscapeDataString(token)}&email={Uri.EscapeDataString(user.Email)}"; // Replace with your actual domain
+
+            var emailSent = await _emailService.SendPasswordResetEmailAsync(user.Email, resetLink);
+
+            if (emailSent)
             {
-                // Registrar la excepción
-                System.Diagnostics.Debug.WriteLine($"Error al validar token: {ex.Message}");
-                return (false, 0);
+                await _auditService.LogAction(user.Id, "Solicitud de Restablecimiento de Contraseña", $"Solicitud de restablecimiento de contraseña para {user.Email}.");
+                return ServiceResult.SuccessResult("Si su cuenta existe y está activa, se le ha enviado un correo electrónico con instrucciones para restablecer su contraseña.");
             }
-        }
-
-        public async Task<bool> CompletePasswordResetAsync(string token, string newPassword)
-        {
-            try
+            else
             {
-                // Buscar el token en la base de datos
-                var passwordReset = await _context.PasswordResets
-                    .FirstOrDefaultAsync(pr =>
-                        pr.Token == token &&
-                        pr.FechaExpiracion > DateTime.Now &&
-                        !pr.Utilizado);
-
-                if (passwordReset == null)
-                {
-                    return false;
-                }
-
-                // Cambiar la contraseña del usuario
-                var usuario = await _context.Usuarios.FindAsync(passwordReset.UsuarioId);
-                if (usuario == null)
-                {
-                    return false;
-                }
-
-                usuario.Password = BCrypt.Net.BCrypt.HashPassword(newPassword);
-                usuario.UltimaActualizacion = DateTime.Now;
-
-                // Marcar el token como utilizado
-                passwordReset.Utilizado = true;
-
-                _context.Usuarios.Update(usuario);
-                _context.PasswordResets.Update(passwordReset);
-
-                await _context.SaveChangesAsync();
-
-                // Registrar en auditoría
-                await _auditService.LogAsync("UPDATE", "Usuarios", usuario.Id, null,
-                    "Contraseña restablecida mediante token");
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                // Registrar la excepción
-                System.Diagnostics.Debug.WriteLine($"Error al completar restablecimiento: {ex.Message}");
-                return false;
+                return ServiceResult.ErrorResult("Hubo un problema al enviar el correo electrónico de restablecimiento de contraseña. Por favor, inténtelo de nuevo más tarde.");
             }
         }
 
-        public async Task<bool> MarkTokenAsUsedAsync(string token)
+        public async Task<ServiceResult> ResetPassword(ResetPasswordViewModel model)
         {
-            try
+            var user = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email == model.Email);
+            if (user == null || !user.IsActive)
             {
-                var passwordReset = await _context.PasswordResets
-                    .FirstOrDefaultAsync(p => p.Token == token);
-
-                if (passwordReset == null)
-                {
-                    return false;
-                }
-
-                passwordReset.Utilizado = true;
-                _context.PasswordResets.Update(passwordReset);
-                await _context.SaveChangesAsync();
-                return true;
-            }
-            catch (Exception ex)
-            {
-                // Registrar la excepción
-                System.Diagnostics.Debug.WriteLine($"Error al marcar token como usado: {ex.Message}");
-                return false;
-            }
-        }
-
-        public async Task<bool> HasPermissionAsync(int userId, string permission)
-        {
-            try
-            {
-                var userPermissions = await _context.UserPermissions
-                    .Where(p => p.UsuarioId == userId && p.Permiso == permission && p.Activo)
-                    .AnyAsync();
-                return userPermissions;
-            }
-            catch (Exception ex)
-            {
-                // Registrar la excepción
-                System.Diagnostics.Debug.WriteLine($"Error al verificar permiso: {ex.Message}");
-                return false;
-            }
-        }
-
-        public async Task<List<string>> GetUserPermissionsAsync(int userId)
-        {
-            var userPermissions = await _context.UserPermissions
-                .Where(up => up.UsuarioId == userId && up.Activo)
-                .Select(up => up.Permiso)
-                .ToListAsync();
-
-            return userPermissions;
-        }
-
-        public async Task<bool> UpdateUserPermissionsAsync(int userId, List<string> permissions)
-        {
-            if (permissions == null)
-                permissions = new List<string>();
-
-            var usuario = await GetUserByIdAsync(userId);
-            if (usuario == null)
-                return false;
-
-            // Obtener permisos actuales
-            var currentPermissions = await _context.UserPermissions
-                .Where(up => up.UsuarioId == userId)
-                .ToListAsync();
-
-            // Eliminar permisos actuales
-            _context.UserPermissions.RemoveRange(currentPermissions);
-
-            // Agregar nuevos permisos
-            foreach (var permission in permissions)
-            {
-                var userPermission = new UserPermission
-                {
-                    UsuarioId = userId,
-                    Permiso = permission,
-                    FechaAsignacion = DateTime.Now,
-                    Activo = true
-                };
-                _context.UserPermissions.Add(userPermission);
+                return ServiceResult.ErrorResult("Usuario no encontrado o inactivo.");
             }
 
+            var passwordReset = await _context.PasswordResets
+                .Where(pr => pr.UserId == user.Id && pr.Token == model.Token && pr.ExpirationDate > DateTime.UtcNow)
+                .OrderByDescending(pr => pr.ExpirationDate)
+                .FirstOrDefaultAsync();
+
+            if (passwordReset == null)
+            {
+                return ServiceResult.ErrorResult("Token de restablecimiento de contraseña inválido o expirado.");
+            }
+
+            if (model.Password != model.ConfirmPassword)
+            {
+                return ServiceResult.ErrorResult("Las contraseñas no coinciden.");
+            }
+
+            user.PasswordHash = _passwordHasher.HashPassword(user, model.Password);
+            user.UltimaActualizacion = DateTime.Now;
+
+            _context.Usuarios.Update(user);
+            _context.PasswordResets.Remove(passwordReset); // Invalidate the token
             await _context.SaveChangesAsync();
 
-            await _auditService.LogAsync("UPDATE", "UserPermissions", userId,
-                $"Permisos anteriores: {string.Join(", ", currentPermissions.Select(cp => cp.Permiso))}",
-                $"Nuevos permisos: {string.Join(", ", permissions)}");
-
-            return true;
+            await _auditService.LogAction(user.Id, "Restablecimiento de Contraseña", $"Contraseña de usuario {user.NombreUsuario} restablecida.");
+            return ServiceResult.SuccessResult("Su contraseña ha sido restablecida exitosamente.");
         }
 
-        public async Task<bool> UserHasPermissionAsync(int userId, string permission)
+        public async Task<ServiceResult> ManagePermissions(ManagePermissionsViewModel model)
         {
-            if (string.IsNullOrWhiteSpace(permission))
-                return false;
-
-            return await _context.UserPermissions
-                .AnyAsync(up => up.UsuarioId == userId && up.Permiso == permission && up.Activo);
-        }
-
-        public async Task<bool> AddPermissionAsync(int userId, string permission)
-        {
-            try
+            var user = await _context.Usuarios.FindAsync(model.UserId);
+            if (user == null)
             {
-                var existingPermission = await _context.UserPermissions
-                    .FirstOrDefaultAsync(up => up.UsuarioId == userId && up.Permiso == permission);
+                return ServiceResult.ErrorResult("Usuario no encontrado.");
+            }
 
-                if (existingPermission != null)
+            // For simplicity, we are treating roles as permissions.
+            // In a more complex system, you would manage a many-to-many relationship
+            // between users and granular permissions.
+            // Here, we just update the user's role.
+            if (!string.IsNullOrEmpty(model.SelectedPermissions.FirstOrDefault()))
+            {
+                var newRole = model.SelectedPermissions.FirstOrDefault();
+                if (newRole != null && await _context.UserPermissions.AnyAsync(p => p.PermissionName == newRole))
                 {
-                    existingPermission.Activo = true;
-                    _context.UserPermissions.Update(existingPermission);
+                    string oldRole = user.Rol;
+                    user.Rol = newRole;
+                    user.UltimaActualizacion = DateTime.Now;
+                    _context.Usuarios.Update(user);
+                    await _context.SaveChangesAsync();
+                    await _auditService.LogAction(user.Id, "Gestión de Permisos", $"Rol de usuario {user.NombreUsuario} cambiado de {oldRole} a {newRole}.");
+                    return ServiceResult.SuccessResult($"Permisos de usuario actualizados. Nuevo rol: {newRole}.");
                 }
                 else
                 {
-                    var userPermission = new UserPermission
-                    {
-                        UsuarioId = userId,
-                        Permiso = permission,
-                        FechaAsignacion = DateTime.Now,
-                        Activo = true
-                    };
-                    _context.UserPermissions.Add(userPermission);
+                    return ServiceResult.ErrorResult("El rol seleccionado no es válido.");
                 }
-
-                await _context.SaveChangesAsync();
-                return true;
             }
-            catch
+            else
             {
-                return false;
+                return ServiceResult.ErrorResult("Debe seleccionar al menos un rol.");
             }
         }
 
-        public async Task<bool> RemovePermissionAsync(int userId, string permission)
+        public async Task<List<string>> GetUserPermissions(int userId)
         {
-            try
+            var user = await _context.Usuarios.FindAsync(userId);
+            if (user == null)
             {
-                var userPermission = await _context.UserPermissions
-                    .FirstOrDefaultAsync(up => up.UsuarioId == userId && up.Permiso == permission);
-
-                if (userPermission != null)
-                {
-                    userPermission.Activo = false;
-                    _context.UserPermissions.Update(userPermission);
-                    await _context.SaveChangesAsync();
-                }
-
-                return true;
+                return new List<string>();
             }
-            catch
-            {
-                return false;
-            }
+            // In this simplified model, user's role is their permission.
+            return new List<string> { user.Rol };
         }
 
-        public async Task<bool> ToggleUserStatusAsync(int userId)
+        public async Task<List<string>> GetAllPermissions()
         {
-            try
-            {
-                var user = await _context.Usuarios.FindAsync(userId);
-                if (user == null)
-                    return false;
+            return await _context.UserPermissions.Select(p => p.PermissionName).ToListAsync();
+        }
 
-                user.Activo = !user.Activo;
+        public async Task<bool> IsInRoleAsync(int userId, string roleName)
+        {
+            var user = await _context.Usuarios.FindAsync(userId);
+            return user != null && user.Rol == roleName;
+        }
+
+        public async Task<bool> IsEmailConfirmedAsync(int userId)
+        {
+            var user = await _context.Usuarios.FindAsync(userId);
+            return user?.EmailConfirmed ?? false;
+        }
+
+        public async Task ConfirmEmailAsync(int userId)
+        {
+            var user = await _context.Usuarios.FindAsync(userId);
+            if (user != null)
+            {
+                user.EmailConfirmed = true;
                 user.UltimaActualizacion = DateTime.Now;
-
                 _context.Usuarios.Update(user);
                 await _context.SaveChangesAsync();
-
-                await _auditService.LogAsync("UPDATE", "Usuarios", userId,
-                    $"Estado anterior: {!user.Activo}", $"Nuevo estado: {user.Activo}");
-
-                return true;
-            }
-            catch
-            {
-                return false;
+                await _auditService.LogAction(user.Id, "Confirmación de Correo", $"Correo electrónico de {user.Email} confirmado.");
             }
         }
 
-        public async Task<PaginatedList<Usuario>> GetPaginatedUsersAsync(int pageIndex, int pageSize, string? searchString = null, string? roleFilter = null)
+        public async Task<string> GeneratePasswordResetTokenAsync(Usuario user)
         {
-            var query = _context.Usuarios.AsQueryable();
-
-            if (!string.IsNullOrWhiteSpace(searchString))
+            var token = Guid.NewGuid().ToString();
+            var passwordReset = new PasswordReset
             {
-                query = query.Where(u => u.Nombre.Contains(searchString) || u.Correo.Contains(searchString));
-            }
-
-            if (!string.IsNullOrWhiteSpace(roleFilter))
-            {
-                query = query.Where(u => u.Rol == roleFilter);
-            }
-
-            query = query.OrderBy(u => u.Nombre);
-
-            return await PaginatedList<Usuario>.CreateAsync(query, pageIndex, pageSize);
+                UserId = user.Id,
+                Token = token,
+                ExpirationDate = DateTime.UtcNow.AddHours(24), // Token valid for 24 hours
+                FechaCreacion = DateTime.UtcNow
+            };
+            _context.PasswordResets.Add(passwordReset);
+            await _context.SaveChangesAsync();
+            return token;
         }
 
-        #region Helper Methods
-
-        private string GenerateRandomToken()
+        public async Task<bool> VerifyPasswordResetTokenAsync(Usuario user, string token)
         {
-            using (var rng = RandomNumberGenerator.Create())
+            return await _context.PasswordResets.AnyAsync(pr => pr.UserId == user.Id && pr.Token == token && pr.ExpirationDate > DateTime.UtcNow);
+        }
+
+        public async Task<bool> CheckPasswordAsync(Usuario user, string password)
+        {
+            var result = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, password);
+            return result == PasswordVerificationResult.Success;
+        }
+
+        public async Task UpdateLastLogin(int userId)
+        {
+            var user = await _context.Usuarios.FindAsync(userId);
+            if (user != null)
             {
-                var tokenData = new byte[32];
-                rng.GetBytes(tokenData);
-                return Convert.ToBase64String(tokenData)
-                    .Replace("/", "_")
-                    .Replace("+", "-")
-                    .Replace("=", "");
+                user.UltimoAcceso = DateTime.Now;
+                _context.Usuarios.Update(user);
+                await _context.SaveChangesAsync();
             }
         }
 
-        #endregion
+        public async Task<string?> GetUserRole(int userId)
+        {
+            var user = await _context.Usuarios.FindAsync(userId);
+            return user?.Rol;
+        }
     }
 }

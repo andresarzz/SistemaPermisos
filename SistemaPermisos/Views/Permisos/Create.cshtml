@@ -1,233 +1,116 @@
 ﻿@model SistemaPermisos.ViewModels.PermisoViewModel
 
 @{
-    ViewData["Title"] = "Solicitud de Permiso";
+    ViewData["Title"] = "Solicitar Permiso";
 }
 
-<div class="container">
-    <div class="card">
-        <div class="card-header">
-            <h1><i class="fas fa-calendar-plus"></i> Formulario de Solicitud de Permiso</h1>
-            <p class="text-muted">Solicitud de Permiso de Salida, Ausencia, Tardía, Incapacidades</p>
-        </div>
-        <div class="card-body">
-            <div class="alert alert-info">
-                <strong>Importante:</strong> Todo permiso de ausencia laboral está sujeto a cumplimiento de requisitos y copia adjunta de documento pertinente de cita, convocatoria o licencia, de ser posible con tres días de anticipación. Posterior a la ausencia, el funcionario debe hacer entrega del comprobante pertinente de asistencia en el plazo de 48 (cuarenta y ocho horas). Las licencias dependen de requisitos previos para su goce. De no presentar el comprobante se tramitará lo que corresponda.
-            </div>
+<div class="container mt-4">
+    <h2 class="mb-4">Solicitar Nuevo Permiso</h2>
 
-            <form asp-action="Create" enctype="multipart/form-data">
-                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-
-                <div class="row mb-3">
-                    <div class="col-md-6">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    Datos del Permiso
+                </div>
+                <div class="card-body">
+                    <form asp-action="Create" enctype="multipart/form-data">
+                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
                         <div class="form-group">
-                            <label class="form-label">Quien se suscribe,</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-user"></i></span>
-                                <input class="form-control" value="@Context.Session.GetString("UsuarioNombre")" readonly />
-                            </div>
+                            <label asp-for="TipoPermiso"></label>
+                            <select asp-for="TipoPermiso" class="form-control">
+                                <option value="">-- Seleccione un tipo --</option>
+                                <option value="Vacaciones">Vacaciones</option>
+                                <option value="Enfermedad">Enfermedad</option>
+                                <option value="Asuntos Personales">Asuntos Personales</option>
+                                <option value="Maternidad/Paternidad">Maternidad/Paternidad</option>
+                                <option value="Capacitación">Capacitación</option>
+                                <option value="Otro">Otro</option>
+                            </select>
+                            <span asp-validation-for="TipoPermiso" class="text-danger"></span>
                         </div>
-                    </div>
-                    <div class="col-md-6">
                         <div class="form-group">
-                            <label asp-for="Cedula" class="form-label"></label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-id-card"></i></span>
-                                <input asp-for="Cedula" class="form-control" placeholder="Número de cédula" />
-                            </div>
+                            <label asp-for="FechaInicio"></label>
+                            <input asp-for="FechaInicio" type="date" class="form-control" />
+                            <span asp-validation-for="FechaInicio" class="text-danger"></span>
+                        </div>
+                        <div class="form-group">
+                            <label asp-for="FechaFin"></label>
+                            <input asp-for="FechaFin" type="date" class="form-control" />
+                            <span asp-validation-for="FechaFin" class="text-danger"></span>
+                        </div>
+
+                        <div class="form-group form-check">
+                            <input class="form-check-input" asp-for="JornadaCompleta" />
+                            <label class="form-check-label" asp-for="JornadaCompleta"></label>
+                        </div>
+                        <div class="form-group form-check">
+                            <input class="form-check-input" asp-for="MediaJornada" />
+                            <label class="form-check-label" asp-for="MediaJornada"></label>
+                        </div>
+
+                        <div class="form-group">
+                            <label asp-for="HoraDesde"></label>
+                            <input asp-for="HoraDesde" type="time" class="form-control" />
+                            <span asp-validation-for="HoraDesde" class="text-danger"></span>
+                        </div>
+                        <div class="form-group">
+                            <label asp-for="HoraHasta"></label>
+                            <input asp-for="HoraHasta" type="time" class="form-control" />
+                            <span asp-validation-for="HoraHasta" class="text-danger"></span>
+                        </div>
+                        <div class="form-group">
+                            <label asp-for="CantidadLecciones"></label>
+                            <input asp-for="CantidadLecciones" type="number" class="form-control" />
+                            <span asp-validation-for="CantidadLecciones" class="text-danger"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label asp-for="Cedula"></label>
+                            <input asp-for="Cedula" class="form-control" />
                             <span asp-validation-for="Cedula" class="text-danger"></span>
                         </div>
-                    </div>
-                </div>
-
-                <div class="row mb-3">
-                    <div class="col-md-6">
                         <div class="form-group">
-                            <label asp-for="Puesto" class="form-label">Puesto en la institución</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-briefcase"></i></span>
-                                <input asp-for="Puesto" class="form-control" placeholder="Puesto que desempeña" />
-                            </div>
+                            <label asp-for="Puesto"></label>
+                            <input asp-for="Puesto" class="form-control" />
                             <span asp-validation-for="Puesto" class="text-danger"></span>
                         </div>
-                    </div>
-                    <div class="col-md-6">
                         <div class="form-group">
-                            <label asp-for="Condicion" class="form-label">Condición</label>
-                            <div class="d-flex">
-                                <div class="form-check me-4">
-                                    <input type="radio" class="form-check-input" asp-for="Condicion" value="Propietario" id="condicionPropietario" />
-                                    <label class="form-check-label" for="condicionPropietario">Propietario</label>
-                                </div>
-                                <div class="form-check">
-                                    <input type="radio" class="form-check-input" asp-for="Condicion" value="Interino" id="condicionInterino" />
-                                    <label class="form-check-label" for="condicionInterino">Interino</label>
-                                </div>
-                            </div>
+                            <label asp-for="Condicion"></label>
+                            <input asp-for="Condicion" class="form-control" />
                             <span asp-validation-for="Condicion" class="text-danger"></span>
                         </div>
-                    </div>
-                </div>
-
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5>PERMISO PARA AUSENTARSE EN LA FECHA:</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row mb-3">
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label asp-for="Fecha" class="form-label"></label>
-                                    <div class="input-group">
-                                        <span class="input-group-text"><i class="fas fa-calendar"></i></span>
-                                        <input asp-for="Fecha" class="form-control" type="date" />
-                                    </div>
-                                    <span asp-validation-for="Fecha" class="text-danger"></span>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label asp-for="HoraDesde" class="form-label">Hora: Desde las</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text"><i class="fas fa-clock"></i></span>
-                                        <input asp-for="HoraDesde" class="form-control" type="time" />
-                                    </div>
-                                    <span asp-validation-for="HoraDesde" class="text-danger"></span>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label asp-for="HoraHasta" class="form-label">hasta las</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text"><i class="fas fa-clock"></i></span>
-                                        <input asp-for="HoraHasta" class="form-control" type="time" />
-                                    </div>
-                                    <span asp-validation-for="HoraHasta" class="text-danger"></span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row mb-3">
-                            <div class="col-md-4">
-                                <div class="form-check">
-                                    <input asp-for="JornadaCompleta" class="form-check-input" type="checkbox" id="jornadaCompleta" />
-                                    <label class="form-check-label" for="jornadaCompleta">
-                                        Jornada Laboral Completa
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-check">
-                                    <input asp-for="MediaJornada" class="form-check-input" type="checkbox" id="mediaJornada" />
-                                    <label class="form-check-label" for="mediaJornada">
-                                        Media Jornada
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label asp-for="CantidadLecciones" class="form-label">Cantidad de Lecciones</label>
-                                    <input asp-for="CantidadLecciones" class="form-control" type="number" min="0" />
-                                    <span asp-validation-for="CantidadLecciones" class="text-danger"></span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5>MOTIVO DE LA SOLICITUD</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="form-group mb-3">
-                            <div class="form-check mb-2">
-                                <input type="radio" class="form-check-input" asp-for="TipoMotivo" value="Cita médica personal" id="motivoCitaMedica" />
-                                <label class="form-check-label" for="motivoCitaMedica">Cita médica personal</label>
-                            </div>
-                            <div class="form-check mb-2">
-                                <input type="radio" class="form-check-input" asp-for="TipoMotivo" value="Acompañar a cita médica" id="motivoAcompañar" />
-                                <label class="form-check-label" for="motivoAcompañar">Acompañar a cita médica a padre, madre, hijos menores de edad o discapacitados, esposo o conyugue</label>
-                            </div>
-                            <div class="form-check mb-2">
-                                <input type="radio" class="form-check-input" asp-for="TipoMotivo" value="Asistencia a Convocatoria" id="motivoConvocatoria" />
-                                <label class="form-check-label" for="motivoConvocatoria">Asistencia a Convocatoria:</label>
-                                <div class="ms-4 mt-2" id="tipoConvocatoriaOptions" style="display: none;">
-                                    <div class="form-check form-check-inline">
-                                        <input type="radio" class="form-check-input" asp-for="TipoConvocatoria" value="Sindical" id="convocatoriaSindical" />
-                                        <label class="form-check-label" for="convocatoriaSindical">Sindical</label>
-                                    </div>
-                                    <div class="form-check form-check-inline">
-                                        <input type="radio" class="form-check-input" asp-for="TipoConvocatoria" value="Regional" id="convocatoriaRegional" />
-                                        <label class="form-check-label" for="convocatoriaRegional">Regional</label>
-                                    </div>
-                                    <div class="form-check form-check-inline">
-                                        <input type="radio" class="form-check-input" asp-for="TipoConvocatoria" value="Nacional" id="convocatoriaNacional" />
-                                        <label class="form-check-label" for="convocatoriaNacional">Nacional</label>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="form-check mb-2">
-                                <input type="radio" class="form-check-input" asp-for="TipoMotivo" value="Asuntos personales" id="motivoAsuntosPersonales" />
-                                <label class="form-check-label" for="motivoAsuntosPersonales">Atención de asuntos personales</label>
-                                <div class="ms-4 mt-2" id="asuntosPersonalesDetails" style="display: none;">
-                                    <div class="form-group">
-                                        <label asp-for="Motivo" class="form-label">Especifique:</label>
-                                        <textarea asp-for="Motivo" class="form-control" rows="2"></textarea>
-                                        <span asp-validation-for="Motivo" class="text-danger"></span>
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="form-group">
+                            <label asp-for="TipoMotivo"></label>
+                            <input asp-for="TipoMotivo" class="form-control" />
                             <span asp-validation-for="TipoMotivo" class="text-danger"></span>
                         </div>
+                        <div class="form-group">
+                            <label asp-for="TipoConvocatoria"></label>
+                            <input asp-for="TipoConvocatoria" class="form-control" />
+                            <span asp-validation-for="TipoConvocatoria" class="text-danger"></span>
+                        </div>
 
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label asp-for="HoraSalida" class="form-label">Saliendo del centro educativo a las</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text"><i class="fas fa-sign-out-alt"></i></span>
-                                        <input asp-for="HoraSalida" class="form-control" placeholder="Hora de salida" />
-                                    </div>
-                                    <span asp-validation-for="HoraSalida" class="text-danger"></span>
-                                </div>
+                        <div class="form-group">
+                            <label asp-for="Motivo"></label>
+                            <textarea asp-for="Motivo" class="form-control" rows="5"></textarea>
+                            <span asp-validation-for="Motivo" class="text-danger"></span>
+                        </div>
+                        <div class="form-group">
+                            <label asp-for="DocumentoAdjunto"></label>
+                            <div class="custom-file">
+                                <input asp-for="DocumentoAdjunto" type="file" class="custom-file-input" id="customFile">
+                                <label class="custom-file-label" for="customFile">Seleccionar archivo...</label>
                             </div>
+                            <span asp-validation-for="DocumentoAdjunto" class="text-danger"></span>
                         </div>
-
-                        <div class="form-group mb-3">
-                            <label asp-for="Observaciones" class="form-label">Observaciones:</label>
-                            <textarea asp-for="Observaciones" class="form-control" rows="2"></textarea>
-                            <span asp-validation-for="Observaciones" class="text-danger"></span>
+                        <div class="form-group mt-3">
+                            <button type="submit" class="btn btn-primary">Solicitar Permiso</button>
+                            <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
                         </div>
-                    </div>
+                    </form>
                 </div>
-
-                <div class="form-group mb-3">
-                    <label asp-for="Comprobante" class="form-label">Documento de respaldo (cita, convocatoria, etc.)</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="fas fa-file-image"></i></span>
-                        <input asp-for="Comprobante" class="form-control image-upload" type="file" accept="image/*" data-preview="image-preview" />
-                    </div>
-                    <small class="form-text text-muted">Adjunte una imagen como comprobante (cita médica, convocatoria, etc.)</small>
-                    <span asp-validation-for="Comprobante" class="text-danger"></span>
-                    <div class="mt-2">
-                        <img id="image-preview" src="#" alt="Vista previa" style="display: none; max-width: 300px; max-height: 200px;" class="img-thumbnail" />
-                    </div>
-                </div>
-
-                <div class="form-group mb-3">
-                    <p>Presento la solicitud el día @DateTime.Now.ToString("dd") del mes @DateTime.Now.ToString("MMMM") del año @DateTime.Now.ToString("yyyy") en CTP Mercedes Norte.</p>
-                </div>
-
-                <div class="form-group mb-3">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-paper-plane"></i> Enviar Solicitud
-                    </button>
-                    <a asp-action="Index" class="btn btn-secondary">
-                        <i class="fas fa-times"></i> Cancelar
-                    </a>
-                </div>
-            </form>
+            </div>
         </div>
     </div>
 </div>
@@ -236,93 +119,16 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('Formulario de permisos cargado');
-
-            // Mostrar/ocultar opciones de convocatoria
-            const motivoConvocatoria = document.getElementById('motivoConvocatoria');
-            const tipoConvocatoriaOptions = document.getElementById('tipoConvocatoriaOptions');
-
-            if (motivoConvocatoria && tipoConvocatoriaOptions) {
-                motivoConvocatoria.addEventListener('change', function() {
-                    if (this.checked) {
-                        tipoConvocatoriaOptions.style.display = 'block';
-                    } else {
-                        tipoConvocatoriaOptions.style.display = 'none';
-                    }
-                });
-            }
-
-            // Mostrar/ocultar detalles de asuntos personales
-            const motivoAsuntosPersonales = document.getElementById('motivoAsuntosPersonales');
-            const asuntosPersonalesDetails = document.getElementById('asuntosPersonalesDetails');
-
-            if (motivoAsuntosPersonales && asuntosPersonalesDetails) {
-                motivoAsuntosPersonales.addEventListener('change', function() {
-                    if (this.checked) {
-                        asuntosPersonalesDetails.style.display = 'block';
-                    } else {
-                        asuntosPersonalesDetails.style.display = 'none';
-                    }
-                });
-            }
-
-            // Inicializar estado de los campos según valores iniciales
-            if (motivoConvocatoria && motivoConvocatoria.checked) {
-                tipoConvocatoriaOptions.style.display = 'block';
-            }
-
-            if (motivoAsuntosPersonales && motivoAsuntosPersonales.checked) {
-                asuntosPersonalesDetails.style.display = 'block';
-            }
-
-            // Previsualización de imagen
-            const imageInput = document.querySelector('.image-upload');
-            if (imageInput) {
-                imageInput.addEventListener('change', function() {
-                    const previewId = this.getAttribute('data-preview');
-                    const preview = document.getElementById(previewId);
-
-                    if (this.files && this.files[0]) {
-                        const reader = new FileReader();
-
-                        reader.onload = function(e) {
-                            preview.src = e.target.result;
-                            preview.style.display = 'block';
-                        }
-
-                        reader.readAsDataURL(this.files[0]);
-                    }
-                });
-            }
-
-            // Validación del formulario antes del envío
-            const form = document.querySelector('form');
-            if (form) {
-                form.addEventListener('submit', function(e) {
-                    console.log('Enviando formulario...');
-
-                    // Validar que al menos un tipo de motivo esté seleccionado
-                    const tipoMotivo = document.querySelector('input[name="TipoMotivo"]:checked');
-                    if (!tipoMotivo) {
-                        alert('Por favor seleccione un motivo para la solicitud.');
-                        e.preventDefault();
-                        return false;
-                    }
-
-                    // Validar condición
-                    const condicion = document.querySelector('input[name="Condicion"]:checked');
-                    if (!condicion) {
-                        alert('Por favor seleccione una condición (Propietario o Interino).');
-                        e.preventDefault();
-                        return false;
-                    }
-
-                    console.log('Formulario válido, enviando...');
-                    return true;
-                });
-            }
-        });
-    </script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                var customFileInput = document.getElementById('customFile');
+                if (customFileInput) {
+                    customFileInput.addEventListener('change', function (e) {
+                        var fileName = e.target.files[0].name;
+                        var label = e.target.nextElementSibling;
+                        label.innerText = fileName;
+                    });
+                }
+            });
+        </script>
 }

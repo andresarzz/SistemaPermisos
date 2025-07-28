@@ -1,10 +1,7 @@
 using Microsoft.AspNetCore.Http;
-using Microsoft.EntityFrameworkCore;
 using SistemaPermisos.Data;
 using SistemaPermisos.Models;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace SistemaPermisos.Services
@@ -16,214 +13,28 @@ namespace SistemaPermisos.Services
 
         public AuditService(ApplicationDbContext context, IHttpContextAccessor httpContextAccessor)
         {
-            _context = context ?? throw new ArgumentNullException(nameof(context));
+            _context = context;
             _httpContextAccessor = httpContextAccessor;
         }
 
-        public async Task LogAsync(string action, string entity, int? entityId, string? oldValues, string? newValues)
+        public async Task LogAction(int userId, string action, string? details = null)
         {
-            try
+            var httpContext = _httpContextAccessor.HttpContext;
+            var ipAddress = httpContext?.Connection.RemoteIpAddress?.ToString();
+            var userAgent = httpContext?.Request.Headers["User-Agent"].ToString();
+
+            var auditLog = new AuditLog
             {
-                var userId = GetCurrentUserId();
-                var ipAddress = GetClientIpAddress();
+                UsuarioId = userId,
+                Accion = action,
+                Detalles = details,
+                FechaHora = DateTime.Now,
+                IpAddress = ipAddress,
+                UserAgent = userAgent
+            };
 
-                var auditLog = new AuditLog
-                {
-                    UsuarioId = userId,
-                    Accion = action,
-                    Entidad = entity,
-                    RegistroId = entityId,
-                    ValoresAnteriores = oldValues,
-                    ValoresNuevos = newValues,
-                    DireccionIP = ipAddress,
-                    Fecha = DateTime.Now
-                };
-
-                _context.AuditLogs.Add(auditLog);
-                await _context.SaveChangesAsync();
-            }
-            catch (Exception)
-            {
-                // Log error but don't throw to avoid breaking the main operation
-            }
-        }
-
-        public async Task LogActivityAsync(int? userId, string action, string entity, int? entityId, string? oldValues = null, string? newValues = null)
-        {
-            try
-            {
-                var ipAddress = GetClientIpAddress();
-
-                var auditLog = new AuditLog
-                {
-                    UsuarioId = userId,
-                    Accion = action,
-                    Entidad = entity,
-                    RegistroId = entityId,
-                    ValoresAnteriores = oldValues,
-                    ValoresNuevos = newValues,
-                    DireccionIP = ipAddress,
-                    Fecha = DateTime.Now
-                };
-
-                _context.AuditLogs.Add(auditLog);
-                await _context.SaveChangesAsync();
-            }
-            catch (Exception)
-            {
-                // Log error but don't throw to avoid breaking the main operation
-            }
-        }
-
-        public async Task LogActivityAsync(int? userId, string action, string entity, int? entityId, string? oldValues, string? newValues, string? description)
-        {
-            try
-            {
-                var ipAddress = GetClientIpAddress();
-
-                var auditLog = new AuditLog
-                {
-                    UsuarioId = userId,
-                    Accion = action,
-                    Entidad = entity,
-                    RegistroId = entityId,
-                    ValoresAnteriores = oldValues,
-                    ValoresNuevos = newValues,
-                    DireccionIP = ipAddress,
-                    Descripcion = description,
-                    Fecha = DateTime.Now
-                };
-
-                _context.AuditLogs.Add(auditLog);
-                await _context.SaveChangesAsync();
-            }
-            catch (Exception)
-            {
-                // Log error but don't throw to avoid breaking the main operation
-            }
-        }
-
-        public async Task<IEnumerable<AuditLog>> GetAuditLogsAsync(int? userId = null, string? action = null, DateTime? fromDate = null, DateTime? toDate = null)
-        {
-            var query = _context.AuditLogs
-                .Include(al => al.Usuario)
-                .AsQueryable();
-
-            if (userId.HasValue)
-            {
-                query = query.Where(al => al.UsuarioId == userId.Value);
-            }
-
-            if (!string.IsNullOrWhiteSpace(action))
-            {
-                query = query.Where(al => al.Accion.Contains(action));
-            }
-
-            if (fromDate.HasValue)
-            {
-                query = query.Where(al => al.Fecha >= fromDate.Value);
-            }
-
-            if (toDate.HasValue)
-            {
-                query = query.Where(al => al.Fecha <= toDate.Value);
-            }
-
-            return await query
-                .OrderByDescending(al => al.Fecha)
-                .ToListAsync();
-        }
-
-        public async Task<IEnumerable<AuditLog>> GetUserActivityAsync(int userId, int count = 10)
-        {
-            return await _context.AuditLogs
-                .Include(al => al.Usuario)
-                .Where(al => al.UsuarioId == userId)
-                .OrderByDescending(al => al.Fecha)
-                .Take(count)
-                .ToListAsync();
-        }
-
-        public async Task<IEnumerable<AuditLog>> GetAllActivityAsync(int count = 100)
-        {
-            return await _context.AuditLogs
-                .Include(al => al.Usuario)
-                .OrderByDescending(al => al.Fecha)
-                .Take(count)
-                .ToListAsync();
-        }
-
-        public async Task<PaginatedList<AuditLog>> GetAllActivityAsync(int pageIndex, int pageSize)
-        {
-            var query = _context.AuditLogs
-                .Include(al => al.Usuario)
-                .OrderByDescending(al => al.Fecha);
-
-            return await PaginatedList<AuditLog>.CreateAsync(query, pageIndex, pageSize);
-        }
-
-        public async Task<PaginatedList<AuditLog>> GetPaginatedAuditLogsAsync(int pageIndex, int pageSize, int? userId = null, string? action = null)
-        {
-            var query = _context.AuditLogs
-                .Include(al => al.Usuario)
-                .AsQueryable();
-
-            if (userId.HasValue)
-            {
-                query = query.Where(al => al.UsuarioId == userId.Value);
-            }
-
-            if (!string.IsNullOrWhiteSpace(action))
-            {
-                query = query.Where(al => al.Accion.Contains(action));
-            }
-
-            query = query.OrderByDescending(al => al.Fecha);
-
-            return await PaginatedList<AuditLog>.CreateAsync(query, pageIndex, pageSize);
-        }
-
-        private int? GetCurrentUserId()
-        {
-            try
-            {
-                var userIdString = _httpContextAccessor.HttpContext?.Session.GetString("UsuarioId");
-                if (!string.IsNullOrEmpty(userIdString) && int.TryParse(userIdString, out int userId))
-                {
-                    return userId;
-                }
-            }
-            catch (Exception)
-            {
-                // Error getting user ID
-            }
-
-            return null;
-        }
-
-        private string GetClientIpAddress()
-        {
-            try
-            {
-                var context = _httpContextAccessor.HttpContext;
-                if (context == null) return "Unknown";
-
-                var ipAddress = context.Request.Headers["X-Forwarded-For"].FirstOrDefault();
-                if (string.IsNullOrEmpty(ipAddress))
-                {
-                    ipAddress = context.Request.Headers["X-Real-IP"].FirstOrDefault();
-                }
-                if (string.IsNullOrEmpty(ipAddress))
-                {
-                    ipAddress = context.Connection.RemoteIpAddress?.ToString();
-                }
-
-                return ipAddress ?? "Unknown";
-            }
-            catch (Exception)
-            {
-                return "Unknown";
-            }
+            _context.AuditLogs.Add(auditLog);
+            await _context.SaveChangesAsync();
         }
     }
 }

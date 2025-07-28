@@ -1,21 +1,20 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
+using System.Linq;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace SistemaPermisos.Repositories
 {
     public interface IRepository<T> where T : class
     {
-        Task<IEnumerable<T>> GetAllAsync();
-        Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate);
-        Task<T> GetByIdAsync(int id);
+        Task<T?> GetByIdAsync(int id);
+        IQueryable<T> GetAll();
+        IQueryable<T> Find(Expression<Func<T, bool>> predicate);
         Task AddAsync(T entity);
-        Task UpdateAsync(T entity);
-        Task RemoveAsync(T entity);
-        Task<int> CountAsync(Expression<Func<T, bool>> predicate = null);
-        Task<bool> ExistsAsync(Expression<Func<T, bool>> predicate);
-        IQueryable<T> Query();
+        void Update(T entity);
+        void Remove(T entity);
+        Task<int> CountAsync();
+        Task<int> CountAsync(Expression<Func<T, bool>> predicate);
+        Task<List<T>> ToListAsync(IQueryable<T> query);
     }
 }

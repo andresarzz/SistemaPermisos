@@ -1,35 +1,34 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Collections.Generic;
 
 namespace SistemaPermisos.Models
 {
     public class Usuario
     {
+        [Key]
         public int Id { get; set; }
 
-        [Required(ErrorMessage = "El nombre es obligatorio")]
+        [Required]
         [StringLength(100)]
         public string Nombre { get; set; } = string.Empty;
 
         [StringLength(100)]
         public string? Apellidos { get; set; }
 
-        [Required(ErrorMessage = "El correo es obligatorio")]
-        [EmailAddress(ErrorMessage = "El formato del correo no es válido")]
-        [StringLength(100)]
-        public string Correo { get; set; } = string.Empty;
-
-        // Alias para compatibilidad
-        public string Email => Correo;
-
+        [Required]
         [StringLength(50)]
-        public string? NombreUsuario { get; set; }
+        public string NombreUsuario { get; set; } = string.Empty;
 
         [Required]
-        public string Password { get; set; } = string.Empty;
+        [EmailAddress]
+        [StringLength(100)]
+        public string Email { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "El rol es obligatorio")]
-        [StringLength(50)]
-        public string Rol { get; set; } = string.Empty;
+        [Required]
+        [StringLength(255)]
+        public string PasswordHash { get; set; } = string.Empty;
 
         [StringLength(20)]
         public string? Cedula { get; set; }
@@ -37,7 +36,7 @@ namespace SistemaPermisos.Models
         [StringLength(100)]
         public string? Puesto { get; set; }
 
-        [StringLength(20)]
+        [StringLength(15)]
         public string? Telefono { get; set; }
 
         [StringLength(100)]
@@ -46,26 +45,30 @@ namespace SistemaPermisos.Models
         [StringLength(200)]
         public string? Direccion { get; set; }
 
-        [StringLength(500)]
-        public string? FotoPerfil { get; set; }
-
+        [DataType(DataType.Date)]
         public DateTime? FechaNacimiento { get; set; }
 
-        public bool Activo { get; set; } = true;
+        [Required]
+        [StringLength(50)]
+        public string Rol { get; set; } = "Docente"; // Ej. "Admin", "Supervisor", "Docente"
 
-        public DateTime FechaCreacion { get; set; } = DateTime.Now;
+        public bool IsActive { get; set; } = true;
+
         public DateTime FechaRegistro { get; set; } = DateTime.Now;
+
         public DateTime UltimaActualizacion { get; set; } = DateTime.Now;
 
         public DateTime? UltimoAcceso { get; set; }
 
+        public bool EmailConfirmed { get; set; } = false;
+
+        [StringLength(255)]
+        public string? FotoPerfilUrl { get; set; } // Ruta a la imagen de perfil
+
         // Navegación
-        public virtual ICollection<UserPermission> UserPermissions { get; set; } = new List<UserPermission>();
-        public virtual ICollection<Permiso> Permisos { get; set; } = new List<Permiso>();
-        public virtual ICollection<OmisionMarca> OmisionesMarca { get; set; } = new List<OmisionMarca>();
-        public virtual ICollection<ReporteDano> ReportesDanos { get; set; } = new List<ReporteDano>();
+        public virtual ICollection<Permiso> PermisosSolicitados { get; set; } = new List<Permiso>();
+        public virtual ICollection<OmisionMarca> OmisionesSolicitadas { get; set; } = new List<OmisionMarca>();
+        public virtual ICollection<ReporteDano> ReportesCreados { get; set; } = new List<ReporteDano>();
         public virtual ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
-        public virtual ICollection<PasswordReset> PasswordResets { get; set; } = new List<PasswordReset>();
-        public virtual TwoFactorAuth? TwoFactorAuth { get; set; }
     }
 }

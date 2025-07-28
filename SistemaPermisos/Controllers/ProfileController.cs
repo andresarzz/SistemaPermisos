@@ -1,271 +1,185 @@
-﻿using System;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using SistemaPermisos.Data;
 using SistemaPermisos.Models;
+using SistemaPermisos.Repositories;
+using SistemaPermisos.Services;
 using SistemaPermisos.ViewModels;
+using System.Linq;
+using System.Security.Claims;
+using System.Threading.Tasks;
 
 namespace SistemaPermisos.Controllers
 {
+    [Authorize]
     public class ProfileController : Controller
     {
-        private readonly ApplicationDbContext _context;
-        private readonly IWebHostEnvironment _hostEnvironment;
+        private readonly IUserService _userService;
+        private readonly IAuditService _auditService;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public ProfileController(ApplicationDbContext context, IWebHostEnvironment hostEnvironment)
+        public ProfileController(IUserService userService, IAuditService auditService, IUnitOfWork unitOfWork)
         {
-            _context = context;
-            _hostEnvironment = hostEnvironment;
+            _userService = userService;
+            _auditService = auditService;
+            _unitOfWork = unitOfWork;
         }
 
-        // GET: Profile
         public async Task<IActionResult> Index()
         {
-            // Verificar si el usuario está autenticado
-            var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
-            if (usuarioId == null)
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null)
             {
-                return RedirectToAction("Login", "Account");
+                return Unauthorized();
             }
 
-            var usuario = await _context.Usuarios.FindAsync(usuarioId);
-            if (usuario == null)
+            var user = await _userService.GetUserById(int.Parse(userId));
+            if (user == null)
             {
                 return NotFound();
             }
 
-            var viewModel = new ProfileViewModel
+            var model = new ProfileViewModel
             {
-                Id = usuario.Id,
-                Nombre = usuario.Nombre,
-                Correo = usuario.Correo,
-                Telefono = usuario.Telefono,
-                Departamento = usuario.Departamento,
-                FechaNacimiento = usuario.FechaNacimiento,
-                Direccion = usuario.Direccion,
-                FotoPerfilActual = usuario.FotoPerfil,
-                FechaRegistro = usuario.FechaRegistro,
-                Rol = usuario.Rol
+                Id = user.Id,
+                Nombre = user.Nombre,
+                Apellidos = user.Apellidos,
+                NombreUsuario = user.NombreUsuario,
+                Email = user.Email,
+                Rol = user.Rol,
+                Cedula = user.Cedula,
+                Puesto = user.Puesto,
+                Telefono = user.Telefono,
+                Departamento = user.Departamento,
+                Direccion = user.Direccion,
+                FechaNacimiento = user.FechaNacimiento,
+                FechaRegistro = user.FechaRegistro,
+                UltimoAcceso = user.UltimoAcceso,
+                Activo = user.IsActive,
+                FotoPerfilUrl = user.FotoPerfilUrl
             };
-
-            return View(viewModel);
-        }
-
-        // GET: Profile/Edit
-        public async Task<IActionResult> Edit()
-        {
-            // Verificar si el usuario está autenticado
-            var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
-            if (usuarioId == null)
-            {
-                return RedirectToAction("Login", "Account");
-            }
-
-            var usuario = await _context.Usuarios.FindAsync(usuarioId);
-            if (usuario == null)
-            {
-                return NotFound();
-            }
-
-            var viewModel = new ProfileViewModel
-            {
-                Id = usuario.Id,
-                Nombre = usuario.Nombre,
-                Correo = usuario.Correo,
-                Telefono = usuario.Telefono,
-                Departamento = usuario.Departamento,
-                FechaNacimiento = usuario.FechaNacimiento,
-                Direccion = usuario.Direccion,
-                FotoPerfilActual = usuario.FotoPerfil,
-                FechaRegistro = usuario.FechaRegistro,
-                Rol = usuario.Rol
-            };
-
-            return View(viewModel);
-        }
-
-        // POST: Profile/Edit
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(ProfileViewModel model)
-        {
-            // Verificar si el usuario está autenticado
-            var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
-            if (usuarioId == null || usuarioId != model.Id)
-            {
-                return RedirectToAction("Login", "Account");
-            }
-
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    var usuario = await _context.Usuarios.FindAsync(usuarioId);
-                    if (usuario == null)
-                    {
-                        return NotFound();
-                    }
-
-                    // Actualizar datos del usuario
-                    usuario.Nombre = model.Nombre;
-                    usuario.Correo = model.Correo;
-                    usuario.Telefono = model.Telefono;
-                    usuario.Departamento = model.Departamento;
-                    usuario.FechaNacimiento = model.FechaNacimiento;
-                    usuario.Direccion = model.Direccion;
-                    usuario.UltimaActualizacion = DateTime.Now;
-
-                    // Procesar la foto de perfil si se ha subido una nueva
-                    if (model.FotoPerfilFile != null && model.FotoPerfilFile.Length > 0)
-                    {
-                        // Eliminar la foto anterior si existe
-                        if (!string.IsNullOrEmpty(usuario.FotoPerfil))
-                        {
-                            var oldFilePath = Path.Combine(_hostEnvironment.WebRootPath, usuario.FotoPerfil.TrimStart('/'));
-                            if (System.IO.File.Exists(oldFilePath))
-                            {
-                                System.IO.File.Delete(oldFilePath);
-                            }
-                        }
-
-                        // Guardar la nueva foto
-                        string uploadsFolder = Path.Combine(_hostEnvironment.WebRootPath, "uploads", "perfiles");
-                        string uniqueFileName = Guid.NewGuid().ToString() + "_" + model.FotoPerfilFile.FileName;
-                        string filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                        // Asegurar que el directorio existe
-                        Directory.CreateDirectory(uploadsFolder);
-
-                        using (var fileStream = new FileStream(filePath, FileMode.Create))
-                        {
-                            await model.FotoPerfilFile.CopyToAsync(fileStream);
-                        }
-
-                        usuario.FotoPerfil = "/uploads/perfiles/" + uniqueFileName;
-
-                        // Actualizar la sesión con el nuevo nombre si cambió
-                        HttpContext.Session.SetString("UsuarioNombre", usuario.Nombre);
-                    }
-
-                    _context.Update(usuario);
-                    await _context.SaveChangesAsync();
-
-                    TempData["SuccessMessage"] = "Perfil actualizado correctamente.";
-                    return RedirectToAction(nameof(Index));
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!UsuarioExists(model.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-            }
 
             return View(model);
         }
 
-        // GET: Profile/ChangePassword
-        public IActionResult ChangePassword()
+        [HttpGet]
+        public async Task<IActionResult> Edit()
         {
-            // Verificar si el usuario está autenticado
-            var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
-            if (usuarioId == null)
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null)
             {
-                return RedirectToAction("Login", "Account");
+                return Unauthorized();
             }
 
+            var user = await _userService.GetUserById(int.Parse(userId));
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            var model = new UserEditViewModel
+            {
+                Id = user.Id,
+                Nombre = user.Nombre,
+                Apellidos = user.Apellidos,
+                NombreUsuario = user.NombreUsuario,
+                Email = user.Email,
+                Rol = user.Rol, // Role is not editable by user in profile edit
+                Cedula = user.Cedula,
+                Puesto = user.Puesto,
+                Telefono = user.Telefono,
+                Departamento = user.Departamento,
+                Direccion = user.Direccion,
+                Activo = user.IsActive,
+                FechaRegistro = user.FechaRegistro,
+                FechaNacimiento = user.FechaNacimiento,
+                FotoPerfilActual = user.FotoPerfilUrl
+            };
+
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(UserEditViewModel model)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null || model.Id != int.Parse(userId))
+            {
+                return Unauthorized();
+            }
+
+            // Remove role from model state validation as it's not editable by user
+            ModelState.Remove("Rol");
+
+            if (ModelState.IsValid)
+            {
+                // Ensure the role from the original user is preserved
+                var originalUser = await _userService.GetUserById(model.Id);
+                if (originalUser == null)
+                {
+                    return NotFound();
+                }
+                model.Rol = originalUser.Rol; // Set the role back to the original user's role
+
+                var result = await _userService.UpdateUser(model);
+                if (result.Success)
+                {
+                    TempData["SuccessMessage"] = "Perfil actualizado exitosamente.";
+                    return RedirectToAction(nameof(Index));
+                }
+                ModelState.AddModelError(string.Empty, result.Message);
+            }
+            return View(model);
+        }
+
+        [HttpGet]
+        public IActionResult ChangePassword()
+        {
             return View();
         }
 
-        // POST: Profile/ChangePassword
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model)
         {
-            // Verificar si el usuario está autenticado
-            var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
-            if (usuarioId == null)
-            {
-                return RedirectToAction("Login", "Account");
-            }
-
             if (ModelState.IsValid)
             {
-                var usuario = await _context.Usuarios.FindAsync(usuarioId);
-                if (usuario == null)
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (userId == null)
                 {
-                    return NotFound();
+                    return Unauthorized();
                 }
 
-                // Verificar la contraseña actual
-                if (!BCrypt.Net.BCrypt.Verify(model.CurrentPassword, usuario.Password))
+                var result = await _userService.ChangePassword(int.Parse(userId), model);
+                if (result.Success)
                 {
-                    ModelState.AddModelError("CurrentPassword", "La contraseña actual es incorrecta.");
-                    return View(model);
+                    TempData["SuccessMessage"] = "Contraseña cambiada exitosamente.";
+                    return RedirectToAction(nameof(Index));
                 }
-
-                // Actualizar la contraseña
-                usuario.Password = BCrypt.Net.BCrypt.HashPassword(model.NewPassword);
-                usuario.UltimaActualizacion = DateTime.Now;
-
-                _context.Update(usuario);
-                await _context.SaveChangesAsync();
-
-                TempData["SuccessMessage"] = "Contraseña actualizada correctamente.";
-                return RedirectToAction(nameof(Index));
+                ModelState.AddModelError(string.Empty, result.Message);
             }
-
             return View(model);
         }
 
-        // GET: Profile/Activity
-        public async Task<IActionResult> Activity()
+        [HttpGet]
+        public async Task<IActionResult> Activity(int pageNumber = 1, int pageSize = 10)
         {
-            // Verificar si el usuario está autenticado
-            var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
-            if (usuarioId == null)
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null)
             {
-                return RedirectToAction("Login", "Account");
+                return Unauthorized();
             }
 
-            // Obtener los últimos permisos, omisiones y reportes del usuario
-            var permisos = await _context.Permisos
-                .Where(p => p.UsuarioId == usuarioId)
-                .OrderByDescending(p => p.FechaSolicitud)
-                .Take(5)
-                .ToListAsync();
+            var auditLogs = _unitOfWork.AuditLogs.Find(a => a.UsuarioId == int.Parse(userId)).OrderByDescending(a => a.FechaHora);
+            var paginatedList = await PaginatedList<Models.AuditLog>.CreateAsync(auditLogs.AsNoTracking(), pageNumber, pageSize);
 
-            var omisiones = await _context.OmisionesMarca
-                .Where(o => o.UsuarioId == usuarioId)
-                .OrderByDescending(o => o.FechaRegistro)
-                .Take(5)
-                .ToListAsync();
+            // Eager load related user for display
+            foreach (var log in paginatedList)
+            {
+                log.Usuario = await _userService.GetUserById(log.UsuarioId);
+            }
 
-            var reportes = await _context.ReportesDanos
-                .Where(r => r.UsuarioId == usuarioId)
-                .OrderByDescending(r => r.FechaReporte)
-                .Take(5)
-                .ToListAsync();
-
-            ViewBag.Permisos = permisos;
-            ViewBag.Omisiones = omisiones;
-            ViewBag.Reportes = reportes;
-
-            return View();
-        }
-
-        private bool UsuarioExists(int id)
-        {
-            return _context.Usuarios.Any(e => e.Id == id);
+            return View(paginatedList);
         }
     }
 }

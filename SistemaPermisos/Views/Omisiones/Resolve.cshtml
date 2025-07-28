@@ -1,109 +1,79 @@
 ﻿@model SistemaPermisos.ViewModels.ResolucionOmisionViewModel
 
 @{
-    ViewData["Title"] = "Resolución de Justificación";
+    ViewData["Title"] = "Resolver Omisión";
     var omision = ViewBag.Omision as SistemaPermisos.Models.OmisionMarca;
 }
 
-<div class="container">
-    <div class="card mb-4">
-        <div class="card-header">
-            <h1><i class="fas fa-gavel"></i> @ViewData["Title"]</h1>
-        </div>
-        <div class="card-body">
-            <div class="row mb-4">
-                <div class="col-md-6">
-                    <h4 class="border-bottom pb-2">Informaci��n del Solicitante</h4>
-                    <dl class="row">
-                        <dt class="col-sm-4">Nombre:</dt>
-                        <dd class="col-sm-8">@omision.Usuario.Nombre</dd>
+<div class="container mt-4">
+    <h2 class="mb-4">Resolver Omisión de Marca</h2>
 
-                        <dt class="col-sm-4">Cédula:</dt>
-                        <dd class="col-sm-8">@(string.IsNullOrEmpty(omision.Cedula) ? "No especificada" : omision.Cedula)</dd>
-
-                        <dt class="col-sm-4">Puesto:</dt>
-                        <dd class="col-sm-8">@(string.IsNullOrEmpty(omision.Puesto) ? "No especificado" : omision.Puesto)</dd>
-
-                        <dt class="col-sm-4">Instancia:</dt>
-                        <dd class="col-sm-8">@(string.IsNullOrEmpty(omision.Instancia) ? "No especificada" : omision.Instancia)</dd>
-                    </dl>
-                </div>
-                <div class="col-md-6">
-                    <h4 class="border-bottom pb-2">Detalles de la Omisión</h4>
-                    <dl class="row">
-                        <dt class="col-sm-4">Fecha de Omisión:</dt>
-                        <dd class="col-sm-8">@omision.FechaOmision.ToString("dd/MM/yyyy")</dd>
-
-                        <dt class="col-sm-4">Tipo de Omisión:</dt>
-                        <dd class="col-sm-8">@omision.TipoOmision</dd>
-
-                        <dt class="col-sm-4">Categoría:</dt>
-                        <dd class="col-sm-8">@(string.IsNullOrEmpty(omision.CategoriaPersonal) ? "No especificada" : omision.CategoriaPersonal)</dd>
-
-                        <dt class="col-sm-4">Título:</dt>
-                        <dd class="col-sm-8">@(string.IsNullOrEmpty(omision.Titulo) ? "No especificado" : omision.Titulo)</dd>
-                    </dl>
-                </div>
-            </div>
-
-            <div class="card mb-4">
-                <div class="card-header bg-info text-white">
-                    <h4 class="mb-0">Justificación del Funcionario</h4>
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    Resolución de Omisión #@Model.OmisionId
                 </div>
                 <div class="card-body">
-                    <p>@omision.Motivo</p>
-                </div>
-            </div>
+                    @if (omision != null)
+                    {
+                        <div class="card mb-4">
+                            <div class="card-header bg-info text-white">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                Detalles de la Omisión
+                            </div>
+                            <div class="card-body">
+                                <dl class="row">
+                                    <dt class="col-sm-3">Solicitante:</dt>
+                                    <dd class="col-sm-9">@omision.Usuario?.Nombre</dd>
 
-            <div class="card mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">RESOLUCIÓN DE JUSTIFICACIÓN PERMISO</h4>
-                </div>
-                <div class="card-body">
-                    <p>Fecha: @DateTime.Now.ToString("dd/MM/yyyy")</p>
-                    <p>Quien suscribe, <strong>@Context.Session.GetString("UsuarioNombre")</strong> en calidad de <strong>Director/a</strong>, con base en las leyes y reglamentos vigentes, responde a solicitud de justificación de permiso; bajo la resolución de:</p>
+                                    <dt class="col-sm-3">Fecha de Omisión:</dt>
+                                    <dd class="col-sm-9">@omision.FechaOmision.ToShortDateString()</dd>
+
+                                    <dt class="col-sm-3">Hora de Omisión:</dt>
+                                    <dd class="col-sm-9">@omision.HoraOmision.ToString(@"hh\:mm")</dd>
+
+                                    <dt class="col-sm-3">Tipo de Omisión:</dt>
+                                    <dd class="col-sm-9">@omision.TipoOmision</dd>
+
+                                    <dt class="col-sm-3">Motivo:</dt>
+                                    <dd class="col-sm-9">@omision.Motivo</dd>
+
+                                    <dt class="col-sm-3">Estado Actual:</dt>
+                                    <dd class="col-sm-9">
+                                        <span class="badge @(omision.Estado == "Pendiente" ? "badge-warning" : omision.Estado == "Aprobado" ? "badge-success" : "badge-danger")">
+                                            @omision.Estado
+                                        </span>
+                                    </dd>
+                                    <dt class="col-sm-3">Fecha Solicitud:</dt>
+                                    <dd class="col-sm-9">@omision.FechaSolicitud.ToString("dd/MM/yyyy HH:mm")</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    }
 
                     <form asp-action="Resolve">
                         <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-                        <input type="hidden" asp-for="OmisionId" value="@omision.Id" />
+                        <input type="hidden" asp-for="OmisionId" />
 
-                        <div class="form-group mb-3">
-                            <div class="form-check mb-2">
-                                <input type="radio" class="form-check-input" asp-for="Resolucion" value="Aceptar con rebajo salarial parcial" id="resolucionRebajoParcial" />
-                                <label class="form-check-label" for="resolucionRebajoParcial">Aceptar con rebajo salarial parcial</label>
-                            </div>
-                            <div class="form-check mb-2">
-                                <input type="radio" class="form-check-input" asp-for="Resolucion" value="Aceptar con rebajo salarial total" id="resolucionRebajoTotal" />
-                                <label class="form-check-label" for="resolucionRebajoTotal">Aceptar con rebajo salarial total</label>
-                            </div>
-                            <div class="form-check mb-2">
-                                <input type="radio" class="form-check-input" asp-for="Resolucion" value="Aceptar sin rebajo salarial" id="resolucionSinRebajo" />
-                                <label class="form-check-label" for="resolucionSinRebajo">Aceptar sin rebajo salarial</label>
-                            </div>
-                            <div class="form-check mb-2">
-                                <input type="radio" class="form-check-input" asp-for="Resolucion" value="Denegar lo solicitado" id="resolucionDenegar" />
-                                <label class="form-check-label" for="resolucionDenegar">Denegar lo solicitado</label>
-                            </div>
-                            <div class="form-check mb-2">
-                                <input type="radio" class="form-check-input" asp-for="Resolucion" value="Acoger convocatoria" id="resolucionAcoger" />
-                                <label class="form-check-label" for="resolucionAcoger">Acoger convocatoria</label>
-                            </div>
-                            <span asp-validation-for="Resolucion" class="text-danger"></span>
+                        <div class="form-group">
+                            <label asp-for="NuevoEstado"></label>
+                            <select asp-for="NuevoEstado" class="form-control">
+                                <option value="">-- Seleccione un estado --</option>
+                                <option value="Aprobado">Aprobado</option>
+                                <option value="Rechazado">Rechazado</option>
+                                <option value="Pendiente">Pendiente</option>
+                            </select>
+                            <span asp-validation-for="NuevoEstado" class="text-danger"></span>
                         </div>
-
-                        <div class="form-group mb-3">
-                            <label asp-for="ObservacionesResolucion" class="form-label">Observaciones:</label>
-                            <textarea asp-for="ObservacionesResolucion" class="form-control" rows="3"></textarea>
-                            <span asp-validation-for="ObservacionesResolucion" class="text-danger"></span>
+                        <div class="form-group">
+                            <label asp-for="ComentariosAprobador"></label>
+                            <textarea asp-for="ComentariosAprobador" class="form-control" rows="5"></textarea>
+                            <span asp-validation-for="ComentariosAprobador" class="text-danger"></span>
                         </div>
-
-                        <div class="form-group mt-4">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save"></i> Guardar Resolución
-                            </button>
-                            <a asp-action="Index" class="btn btn-secondary">
-                                <i class="fas fa-times"></i> Cancelar
-                            </a>
+                        <div class="form-group mt-3">
+                            <button type="submit" class="btn btn-primary">Guardar Resolución</button>
+                            <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
                         </div>
                     </form>
                 </div>

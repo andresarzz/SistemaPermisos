@@ -4,144 +4,130 @@
     ViewData["Title"] = "Editar Usuario";
 }
 
-<div class="container">
-    <div class="card">
-        <div class="card-header">
-            <h1><i class="fas fa-user-edit"></i> @ViewData["Title"]</h1>
-        </div>
-        <div class="card-body">
-            <form asp-action="Edit">
-                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-                <input type="hidden" asp-for="Id" />
-                <input type="hidden" asp-for="FechaRegistro" />
+<div class="container mt-4">
+    <h2 class="mb-4">Editar Usuario</h2>
 
-                <div class="row mb-3">
-                    <div class="col-md-6">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    Actualizar Datos del Usuario
+                </div>
+                <div class="card-body">
+                    <form asp-action="Edit" enctype="multipart/form-data">
+                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                        <input type="hidden" asp-for="Id" />
+                        <input type="hidden" asp-for="FechaRegistro" />
+                        <input type="hidden" asp-for="Activo" />
+                        <input type="hidden" asp-for="FotoPerfilActual" /> @* Keep track of current photo path *@
+
                         <div class="form-group">
-                            <label asp-for="Nombre" class="form-label"></label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-user"></i></span>
-                                <input asp-for="Nombre" class="form-control" />
-                            </div>
+                            <label asp-for="Nombre"></label>
+                            <input asp-for="Nombre" class="form-control" />
                             <span asp-validation-for="Nombre" class="text-danger"></span>
                         </div>
-                    </div>
-                    <div class="col-md-6">
                         <div class="form-group">
-                            <label asp-for="Correo" class="form-label"></label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-envelope"></i></span>
-                                <input asp-for="Correo" class="form-control" />
-                            </div>
-                            <span asp-validation-for="Correo" class="text-danger"></span>
+                            <label asp-for="Apellidos"></label>
+                            <input asp-for="Apellidos" class="form-control" />
+                            <span asp-validation-for="Apellidos" class="text-danger"></span>
                         </div>
-                    </div>
-                </div>
-
-                <div class="row mb-3">
-                    <div class="col-md-6">
                         <div class="form-group">
-                            <label asp-for="NewPassword" class="form-label"></label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-lock"></i></span>
-                                <input asp-for="NewPassword" class="form-control" placeholder="Dejar en blanco para mantener la actual" />
-                            </div>
-                            <span asp-validation-for="NewPassword" class="text-danger"></span>
+                            <label asp-for="NombreUsuario"></label>
+                            <input asp-for="NombreUsuario" class="form-control" />
+                            <span asp-validation-for="NombreUsuario" class="text-danger"></span>
                         </div>
-                    </div>
-                    <div class="col-md-6">
                         <div class="form-group">
-                            <label asp-for="ConfirmPassword" class="form-label"></label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-lock"></i></span>
-                                <input asp-for="ConfirmPassword" class="form-control" placeholder="Confirmar nueva contraseña" />
-                            </div>
-                            <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
+                            <label asp-for="Email"></label>
+                            <input asp-for="Email" class="form-control" />
+                            <span asp-validation-for="Email" class="text-danger"></span>
                         </div>
-                    </div>
-                </div>
-
-                <div class="row mb-3">
-                    <div class="col-md-6">
                         <div class="form-group">
-                            <label asp-for="Rol" class="form-label"></label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-user-tag"></i></span>
-                                <select asp-for="Rol" class="form-select">
-                                    <option value="Docente">Docente</option>
-                                    <option value="Admin">Administrador</option>
-                                </select>
-                            </div>
+                            <label asp-for="Rol"></label>
+                            <select asp-for="Rol" class="form-control">
+                                @foreach (var role in ViewBag.Roles)
+                                {
+                                    <option value="@role" selected="@(Model.Rol == role)">@role</option>
+                                }
+                            </select>
                             <span asp-validation-for="Rol" class="text-danger"></span>
                         </div>
-                    </div>
-                    <div class="col-md-6">
                         <div class="form-group">
-                            <label asp-for="Cedula" class="form-label"></label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-id-card"></i></span>
-                                <input asp-for="Cedula" class="form-control" />
-                            </div>
+                            <label asp-for="Cedula"></label>
+                            <input asp-for="Cedula" class="form-control" />
                             <span asp-validation-for="Cedula" class="text-danger"></span>
                         </div>
-                    </div>
-                </div>
-
-                <div class="row mb-3">
-                    <div class="col-md-6">
                         <div class="form-group">
-                            <label asp-for="Puesto" class="form-label"></label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-briefcase"></i></span>
-                                <input asp-for="Puesto" class="form-control" />
-                            </div>
+                            <label asp-for="Puesto"></label>
+                            <input asp-for="Puesto" class="form-control" />
                             <span asp-validation-for="Puesto" class="text-danger"></span>
                         </div>
-                    </div>
-                    <div class="col-md-6">
                         <div class="form-group">
-                            <label asp-for="Telefono" class="form-label"></label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-phone"></i></span>
-                                <input asp-for="Telefono" class="form-control" />
-                            </div>
+                            <label asp-for="Telefono"></label>
+                            <input asp-for="Telefono" class="form-control" />
                             <span asp-validation-for="Telefono" class="text-danger"></span>
                         </div>
-                    </div>
-                </div>
-
-                <div class="row mb-3">
-                    <div class="col-md-6">
                         <div class="form-group">
-                            <label asp-for="Departamento" class="form-label"></label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-building"></i></span>
-                                <input asp-for="Departamento" class="form-control" />
-                            </div>
+                            <label asp-for="Departamento"></label>
+                            <input asp-for="Departamento" class="form-control" />
                             <span asp-validation-for="Departamento" class="text-danger"></span>
                         </div>
-                    </div>
-                    <div class="col-md-6">
                         <div class="form-group">
-                            <label asp-for="Direccion" class="form-label"></label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
-                                <input asp-for="Direccion" class="form-control" />
-                            </div>
+                            <label asp-for="Direccion"></label>
+                            <input asp-for="Direccion" class="form-control" />
                             <span asp-validation-for="Direccion" class="text-danger"></span>
                         </div>
-                    </div>
-                </div>
+                        <div class="form-group">
+                            <label asp-for="FechaNacimiento"></label>
+                            <input asp-for="FechaNacimiento" type="date" class="form-control" />
+                            <span asp-validation-for="FechaNacimiento" class="text-danger"></span>
+                        </div>
+                        <div class="form-group form-check">
+                            <input class="form-check-input" asp-for="Activo" />
+                            <label class="form-check-label" asp-for="Activo"></label>
+                        </div>
 
-                <div class="form-group mt-4">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> Guardar Cambios
-                    </button>
-                    <a asp-action="Index" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left"></i> Volver a la Lista
-                    </a>
+                        <hr />
+                        <h5>Cambiar Contraseña (Opcional)</h5>
+                        <div class="form-group">
+                            <label asp-for="NewPassword"></label>
+                            <input asp-for="NewPassword" class="form-control" />
+                            <span asp-validation-for="NewPassword" class="text-danger"></span>
+                        </div>
+                        <div class="form-group">
+                            <label asp-for="ConfirmNewPassword"></label>
+                            <input asp-for="ConfirmNewPassword" class="form-control" />
+                            <span asp-validation-for="ConfirmNewPassword" class="text-danger"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label asp-for="NuevaFotoPerfil"></label>
+                            <div class="custom-file">
+                                <input asp-for="NuevaFotoPerfil" type="file" class="custom-file-input" id="customFile">
+                                <label class="custom-file-label" for="customFile">
+                                    @if (!string.IsNullOrEmpty(Model.FotoPerfilActual))
+                                    {
+                                        <span>@Path.GetFileName(Model.FotoPerfilActual)</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Seleccionar archivo...</span>
+                                    }
+                                </label>
+                            </div>
+                            <span asp-validation-for="NuevaFotoPerfil" class="text-danger"></span>
+                            @if (!string.IsNullOrEmpty(Model.FotoPerfilActual))
+                            {
+                                <small class="form-text text-muted">Foto actual: <a href="@Model.FotoPerfilActual" target="_blank">Ver</a></small>
+                            }
+                        </div>
+
+                        <div class="form-group mt-3">
+                            <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                            <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
+                        </div>
+                    </form>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 </div>
@@ -150,5 +136,16 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var customFileInput = document.getElementById('customFile');
+            if (customFileInput) {
+                customFileInput.addEventListener('change', function (e) {
+                    var fileName = e.target.files[0].name;
+                    var label = e.target.nextElementSibling;
+                    label.innerText = fileName;
+                });
+            }
+        });
+    </script>
 }
-

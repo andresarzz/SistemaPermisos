@@ -1,88 +1,37 @@
 ﻿@{
     ViewData["Title"] = "Inicio";
-    var usuarioId = Context.Session.GetInt32("UsuarioId");
-    var usuarioNombre = Context.Session.GetString("UsuarioNombre");
-    var usuarioRol = Context.Session.GetString("UsuarioRol");
 }
 
-<div class="container">
-    @if (usuarioId != null)
+<div class="text-center">
+    <h1 class="display-4">Bienvenido al Sistema de Gestión de Permisos</h1>
+    <p>Una solución integral para la administración de permisos, omisiones de marca y reportes de daño.</p>
+    <img src="~/images/logo.png" alt="Logo del Sistema" class="img-fluid" style="max-width: 300px; margin-top: 20px;" />
+
+    @if (!User.Identity!.IsAuthenticated)
     {
-        <div class="jumbotron bg-light p-5 rounded">
-            <div class="text-center mb-4">
-                <img src="~/images/logo.png" alt="MIPP+ Logo" class="jumbotron-logo" />
-            </div>
-            <h1 class="display-4 text-center">Bienvenido, @usuarioNombre!</h1>
-            <p class="lead text-center">MIPP+ - Sistema de Gestión de Permisos y Reportes del Personal Docente</p>
-            <hr class="my-4">
-            <p class="text-center">Utilice este sistema para gestionar sus solicitudes de permisos, justificar omisiones de marcación y reportar daños en la infraestructura.</p>
+        <div class="mt-4">
+            <p>Por favor, <a asp-controller="Account" asp-action="Login">inicie sesión</a> para acceder a las funcionalidades del sistema.</p>
+            <p>¿No tiene una cuenta? <a asp-controller="Account" asp-action="Register">Regístrese aquí</a>.</p>
         </div>
-
-        <div class="row mt-4">
-            <div class="col-md-4 mb-4">
-                <div class="card h-100 dashboard-card">
-                    <div class="card-body text-center">
-                        <i class="fas fa-calendar-check fa-3x mb-3" style="color: var(--accent-color);"></i>
-                        <h5 class="card-title">Permisos</h5>
-                        <p class="card-text">Solicite permisos para ausentarse por citas médicas u otros motivos. Adjunte comprobantes y justificaciones.</p>
-                        <a asp-controller="Permisos" asp-action="Index" class="btn btn-primary">
-                            <i class="fas fa-arrow-right"></i> Gestionar Permisos
-                        </a>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4 mb-4">
-                <div class="card h-100 dashboard-card">
-                    <div class="card-body text-center">
-                        <i class="fas fa-clock fa-3x mb-3" style="color: var(--accent-color);"></i>
-                        <h5 class="card-title">Omisiones de Marcación</h5>
-                        <p class="card-text">Justifique omisiones de marcación en el reloj de entrada o salida.</p>
-                        <a asp-controller="Omisiones" asp-action="Index" class="btn btn-primary">
-                            <i class="fas fa-arrow-right"></i> Gestionar Omisiones
-                        </a>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4 mb-4">
-                <div class="card h-100 dashboard-card">
-                    <div class="card-body text-center">
-                        <i class="fas fa-exclamation-triangle fa-3x mb-3" style="color: var(--accent-color);"></i>
-                        <h5 class="card-title">Reportes de Daños</h5>
-                        <p class="card-text">Reporte daños en la infraestructura del centro educativo. Adjunte fotos para mejor identificación.</p>
-                        <a asp-controller="Reportes" asp-action="Index" class="btn btn-primary">
-                            <i class="fas fa-arrow-right"></i> Gestionar Reportes
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        @if (usuarioRol == "Admin")
-        {
-            <div class="alert alert-info mt-4">
-                <h4><i class="fas fa-user-shield"></i> Panel de Administración</h4>
-                <p>Como administrador, puede revisar y aprobar solicitudes de permisos, justificaciones de omisiones y reportes de daños.</p>
-            </div>
-        }
     }
     else
     {
-        <div class="jumbotron bg-light p-5 rounded">
-            <div class="text-center mb-4">
-                <img src="~/images/logo.png" alt="MIPP+ Logo" class="jumbotron-logo" />
-            </div>
-            <h1 class="display-4 text-center">MIPP+</h1>
-            <p class="lead text-center">Sistema de Gestión de Permisos y Reportes del Personal Docente</p>
-            <hr class="my-4">
-            <p class="text-center">Por favor, inicie sesión para acceder a las funcionalidades del sistema.</p>
-            <div class="text-center mt-4">
-                <a class="btn btn-primary btn-lg mx-2" asp-controller="Account" asp-action="Login" role="button">
-                    <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
-                </a>
-                <a class="btn btn-secondary btn-lg mx-2" asp-controller="Account" asp-action="Register" role="button">
-                    <i class="fas fa-user-plus"></i> Registrarse
-                </a>
-            </div>
+        <div class="mt-4">
+            <p>Ha iniciado sesión como <strong>@User.Identity.Name</strong> con el rol de <strong>@User.FindFirstValue(System.Security.Claims.ClaimTypes.Role)</strong>.</p>
+            <p>Explore las opciones disponibles en el menú de navegación.</p>
+
+            @if (User.IsInRole("Admin"))
+            {
+                <a asp-controller="Admin" asp-action="Dashboard" class="btn btn-primary btn-lg mt-3">Ir al Panel de Administración</a>
+            }
+            else if (User.IsInRole("Supervisor"))
+            {
+                <a asp-controller="Supervisor" asp-action="Dashboard" class="btn btn-primary btn-lg mt-3">Ir al Panel de Supervisor</a>
+            }
+            else if (User.IsInRole("Docente"))
+            {
+                <a asp-controller="Docente" asp-action="Dashboard" class="btn btn-primary btn-lg mt-3">Ir al Panel de Docente</a>
+            }
         </div>
     }
 </div>

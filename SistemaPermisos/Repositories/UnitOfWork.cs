@@ -1,57 +1,59 @@
-using System.Threading.Tasks;
 using SistemaPermisos.Data;
 using SistemaPermisos.Models;
+using System;
+using System.Threading.Tasks;
 
 namespace SistemaPermisos.Repositories
 {
     public class UnitOfWork : IUnitOfWork
     {
         private readonly ApplicationDbContext _context;
-        private bool _disposed = false;
-
-        public IRepository<Usuario> Usuarios { get; private set; }
-        public IRepository<Permiso> Permisos { get; private set; }
-        public IRepository<OmisionMarca> OmisionesMarca { get; private set; }
-        public IRepository<ReporteDano> ReportesDanos { get; private set; }
-        public IRepository<AuditLog> AuditLogs { get; private set; }
-        public IRepository<UserPermission> UserPermissions { get; private set; }
-        public IRepository<PasswordReset> PasswordResets { get; private set; }
-        public IRepository<TwoFactorAuth> TwoFactorAuth { get; private set; }
+        private IRepository<Usuario>? _usuarios;
+        private IRepository<Permiso>? _permisos;
+        private IRepository<OmisionMarca>? _omisionesMarca;
+        private IRepository<ReporteDano>? _reportesDano;
+        private IRepository<AuditLog>? _auditLogs;
+        private IRepository<UserPermission>? _userPermissions;
+        private IRepository<PasswordReset>? _passwordResets;
+        private IRepository<TwoFactorAuth>? _twoFactorAuths;
 
         public UnitOfWork(ApplicationDbContext context)
         {
             _context = context;
-            Usuarios = new Repository<Usuario>(_context);
-            Permisos = new Repository<Permiso>(_context);
-            OmisionesMarca = new Repository<OmisionMarca>(_context);
-            ReportesDanos = new Repository<ReporteDano>(_context);
-            AuditLogs = new Repository<AuditLog>(_context);
-            UserPermissions = new Repository<UserPermission>(_context);
-            PasswordResets = new Repository<PasswordReset>(_context);
-            TwoFactorAuth = new Repository<TwoFactorAuth>(_context);
         }
 
-        public async Task<int> CompleteAsync()
+        public IRepository<Usuario> Usuarios => _usuarios ??= new Repository<Usuario>(_context);
+        public IRepository<Permiso> Permisos => _permisos ??= new Repository<Permiso>(_context);
+        public IRepository<OmisionMarca> OmisionesMarca => _omisionesMarca ??= new Repository<OmisionMarca>(_context);
+        public IRepository<ReporteDano> ReportesDano => _reportesDano ??= new Repository<ReporteDano>(_context);
+        public IRepository<AuditLog> AuditLogs => _auditLogs ??= new Repository<AuditLog>(_context);
+        public IRepository<UserPermission> UserPermissions => _userPermissions ??= new Repository<UserPermission>(_context);
+        public IRepository<PasswordReset> PasswordResets => _passwordResets ??= new Repository<PasswordReset>(_context);
+        public IRepository<TwoFactorAuth> TwoFactorAuths => _twoFactorAuths ??= new Repository<TwoFactorAuth>(_context);
+
+        public async Task<int> SaveAsync()
         {
             return await _context.SaveChangesAsync();
         }
 
+        private bool disposed = false;
+
         protected virtual void Dispose(bool disposing)
         {
-            if (!_disposed)
+            if (!this.disposed)
             {
                 if (disposing)
                 {
                     _context.Dispose();
                 }
-                _disposed = true;
             }
+            this.disposed = true;
         }
 
         public void Dispose()
         {
             Dispose(true);
-            System.GC.SuppressFinalize(this);
+            GC.SuppressFinalize(this);
         }
     }
 }

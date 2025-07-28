@@ -1,6 +1,6 @@
+using SistemaPermisos.Models;
 using System;
 using System.Threading.Tasks;
-using SistemaPermisos.Models;
 
 namespace SistemaPermisos.Repositories
 {
@@ -9,12 +9,12 @@ namespace SistemaPermisos.Repositories
         IRepository<Usuario> Usuarios { get; }
         IRepository<Permiso> Permisos { get; }
         IRepository<OmisionMarca> OmisionesMarca { get; }
-        IRepository<ReporteDano> ReportesDanos { get; }
+        IRepository<ReporteDano> ReportesDano { get; }
         IRepository<AuditLog> AuditLogs { get; }
         IRepository<UserPermission> UserPermissions { get; }
         IRepository<PasswordReset> PasswordResets { get; }
-        IRepository<TwoFactorAuth> TwoFactorAuth { get; }
+        IRepository<TwoFactorAuth> TwoFactorAuths { get; }
 
-        Task<int> CompleteAsync();
+        Task<int> SaveAsync();
     }
 }

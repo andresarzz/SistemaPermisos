@@ -4,165 +4,98 @@
     ViewData["Title"] = "Panel de Administración";
 }
 
-<div class="container-fluid">
+<div class="container mt-4">
+    <h2 class="mb-4">Panel de Administración</h2>
+
     <div class="row">
-        <div class="col-12">
-            <h1 class="h3 mb-4 text-gray-800">Panel de Administración</h1>
-        </div>
-    </div>
-
-    <!-- Tarjetas de estadísticas -->
-    <div class="row">
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-primary shadow h-100 py-2">
+        <div class="col-md-4 mb-3">
+            <div class="card text-white bg-primary">
                 <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                Total Usuarios
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.TotalUsuarios</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-users fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
+                    <h5 class="card-title">Usuarios Registrados</h5>
+                    <p class="card-text display-4">@Model.TotalUsuarios</p>
                 </div>
             </div>
         </div>
-
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-success shadow h-100 py-2">
+        <div class="col-md-4 mb-3">
+            <div class="card text-white bg-warning">
                 <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                Usuarios Activos
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.UsuariosActivos</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-user-check fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
+                    <h5 class="card-title">Permisos Pendientes</h5>
+                    <p class="card-text display-4">@Model.PermisosPendientes</p>
                 </div>
             </div>
         </div>
-
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-info shadow h-100 py-2">
+        <div class="col-md-4 mb-3">
+            <div class="card text-white bg-info">
                 <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                Permisos Pendientes
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.PermisosPendientes</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
+                    <h5 class="card-title">Omisiones Pendientes</h5>
+                    <p class="card-text display-4">@Model.OmisionesPendientes</p>
                 </div>
             </div>
         </div>
-
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-warning shadow h-100 py-2">
+        <div class="col-md-4 mb-3">
+            <div class="card text-white bg-danger">
                 <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                Omisiones Pendientes
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.OmisionesPendientes</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
+                    <h5 class="card-title">Reportes de Daño Pendientes</h5>
+                    <p class="card-text display-4">@Model.ReportesPendientes</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <h5 class="card-title">Permisos Aprobados</h5>
+                    <p class="card-text display-4">@Model.PermisosAprobados</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card text-white bg-secondary">
+                <div class="card-body">
+                    <h5 class="card-title">Reportes Resueltos</h5>
+                    <p class="card-text display-4">@Model.ReportesResueltos</p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Acciones rápidas -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Acciones Rápidas</h6>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-3 mb-3">
-                            <a href="@Url.Action("Index", "Users")" class="btn btn-primary btn-block">
-                                <i class="fas fa-users"></i> Gestionar Usuarios
-                            </a>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <a href="@Url.Action("Index", "Permisos")" class="btn btn-info btn-block">
-                                <i class="fas fa-clipboard-list"></i> Ver Permisos
-                            </a>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <a href="@Url.Action("Index", "Omisiones")" class="btn btn-warning btn-block">
-                                <i class="fas fa-exclamation-triangle"></i> Ver Omisiones
-                            </a>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <a href="@Url.Action("Index", "Reportes")" class="btn btn-success btn-block">
-                                <i class="fas fa-chart-bar"></i> Reportes
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <div class="card mt-4">
+        <div class="card-header">
+            Actividad Reciente del Sistema
         </div>
-    </div>
-
-    <!-- Actividad reciente -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Actividad Reciente</h6>
+        <div class="card-body">
+            @if (!Model.ActividadReciente.Any())
+            {
+                <p class="text-center">No hay actividad reciente para mostrar.</p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Usuario</th>
+                                <th>Acción</th>
+                                <th>Detalles</th>
+                                <th>Fecha y Hora</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var log in Model.ActividadReciente)
+                            {
+                                <tr>
+                                    <td>@log.Usuario?.NombreUsuario</td>
+                                    <td>@log.Accion</td>
+                                    <td>@log.Detalles</td>
+                                    <td>@log.FechaHora.ToString("dd/MM/yyyy HH:mm:ss")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
                 </div>
-                <div class="card-body">
-                    @if (Model.ActividadReciente.Any())
-                    {
-                        <div class="table-responsive">
-                            <table class="table table-bordered">
-                                <thead>
-                                    <tr>
-                                        <th>Fecha</th>
-                                        <th>Usuario</th>
-                                        <th>Acción</th>
-                                        <th>Entidad</th>
-                                        <th>Descripción</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var log in Model.ActividadReciente)
-                                    {
-                                        <tr>
-                                            <td>@log.FechaActividad.ToString("dd/MM/yyyy HH:mm")</td>
-                                            <td>@log.Usuario?.Nombre</td>
-                                            <td>@log.Accion</td>
-                                            <td>@log.TipoEntidad</td>
-                                            <td>@log.Descripcion</td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                    }
-                    else
-                    {
-                        <p class="text-muted">No hay actividad reciente.</p>
-                    }
-                </div>
-            </div>
+            }
+        </div>
+        <div class="card-footer text-right">
+            <a asp-controller="Users" asp-action="AuditLog" class="btn btn-outline-info">Ver Todo el Registro de Auditoría</a>
         </div>
     </div>
 </div>

@@ -1,60 +1,71 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Http;
+using System;
 using System.ComponentModel.DataAnnotations;
-using Microsoft.AspNetCore.Http;
 
 namespace SistemaPermisos.ViewModels
 {
     public class PermisoViewModel
     {
-        [Required(ErrorMessage = "La fecha es obligatoria")]
-        [Display(Name = "Fecha")]
+        public int Id { get; set; }
+
+        [Required(ErrorMessage = "El tipo de permiso es obligatorio")]
+        [StringLength(50)]
+        [Display(Name = "Tipo de Permiso")]
+        public string TipoPermiso { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "La fecha de inicio es obligatoria")]
         [DataType(DataType.Date)]
-        public DateTime Fecha { get; set; }
+        [Display(Name = "Fecha de Inicio")]
+        public DateTime FechaInicio { get; set; }
 
-        [Display(Name = "Hora desde")]
-        public string? HoraDesde { get; set; }
+        [Required(ErrorMessage = "La fecha de fin es obligatoria")]
+        [DataType(DataType.Date)]
+        [Display(Name = "Fecha de Fin")]
+        public DateTime FechaFin { get; set; }
 
-        [Display(Name = "Hora hasta")]
-        public string? HoraHasta { get; set; }
+        [DataType(DataType.Time)]
+        [Display(Name = "Hora Desde")]
+        public TimeSpan? HoraDesde { get; set; }
 
-        [Display(Name = "Jornada completa")]
-        public bool JornadaCompleta { get; set; }
+        [DataType(DataType.Time)]
+        [Display(Name = "Hora Hasta")]
+        public TimeSpan? HoraHasta { get; set; }
 
-        [Display(Name = "Media jornada")]
-        public bool MediaJornada { get; set; }
+        [Display(Name = "Jornada Completa")]
+        public bool JornadaCompleta { get; set; } = false;
 
-        [Display(Name = "Cantidad de lecciones")]
+        [Display(Name = "Media Jornada")]
+        public bool MediaJornada { get; set; } = false;
+
+        [Display(Name = "Cantidad de Lecciones")]
         public int? CantidadLecciones { get; set; }
 
-        [Required(ErrorMessage = "La cédula es obligatoria")]
+        [StringLength(20)]
         [Display(Name = "Cédula")]
-        public string Cedula { get; set; } = string.Empty;
+        public string? Cedula { get; set; }
 
-        [Required(ErrorMessage = "El puesto es obligatorio")]
+        [StringLength(100)]
         [Display(Name = "Puesto")]
-        public string Puesto { get; set; } = string.Empty;
+        public string? Puesto { get; set; }
 
-        [Required(ErrorMessage = "La condición es obligatoria")]
+        [StringLength(50)]
         [Display(Name = "Condición")]
-        public string Condicion { get; set; } = string.Empty;
+        public string? Condicion { get; set; }
 
-        [Required(ErrorMessage = "El tipo de motivo es obligatorio")]
-        [Display(Name = "Tipo de motivo")]
-        public string TipoMotivo { get; set; } = string.Empty;
+        [StringLength(100)]
+        [Display(Name = "Tipo de Motivo")]
+        public string? TipoMotivo { get; set; }
 
-        [Display(Name = "Tipo de convocatoria")]
+        [StringLength(100)]
+        [Display(Name = "Tipo de Convocatoria")]
         public string? TipoConvocatoria { get; set; }
 
+        [Required(ErrorMessage = "El motivo es obligatorio")]
+        [StringLength(500)]
         [Display(Name = "Motivo")]
-        public string? Motivo { get; set; }
+        public string Motivo { get; set; } = string.Empty;
 
-        [Display(Name = "Observaciones")]
-        public string? Observaciones { get; set; }
-
-        [Display(Name = "Hora de salida")]
-        public string? HoraSalida { get; set; }
-
-        [Display(Name = "Comprobante")]
-        public IFormFile? Comprobante { get; set; }
+        [Display(Name = "Documento Adjunto (PDF/Imagen)")]
+        public IFormFile? DocumentoAdjunto { get; set; } // Para subir un archivo
     }
 }

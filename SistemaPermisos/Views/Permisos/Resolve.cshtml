@@ -1,123 +1,103 @@
 ﻿@model SistemaPermisos.ViewModels.ResolucionPermisoViewModel
 
 @{
-    ViewData["Title"] = "Resolución de Permiso";
+    ViewData["Title"] = "Resolver Permiso";
     var permiso = ViewBag.Permiso as SistemaPermisos.Models.Permiso;
 }
 
-<div class="container">
-    <div class="card mb-4">
-        <div class="card-header">
-            <h1><i class="fas fa-gavel"></i> @ViewData["Title"]</h1>
-        </div>
-        <div class="card-body">
-            <div class="row mb-4">
-                <div class="col-md-6">
-                    <h4 class="border-bottom pb-2">Información del Solicitante</h4>
-                    <dl class="row">
-                        <dt class="col-sm-4">Nombre:</dt>
-                        <dd class="col-sm-8">@permiso.Usuario.Nombre</dd>
+<div class="container mt-4">
+    <h2 class="mb-4">Resolver Permiso</h2>
 
-                        <dt class="col-sm-4">Cédula:</dt>
-                        <dd class="col-sm-8">@(string.IsNullOrEmpty(permiso.Cedula) ? "No especificada" : permiso.Cedula)</dd>
-
-                        <dt class="col-sm-4">Puesto:</dt>
-                        <dd class="col-sm-8">@(string.IsNullOrEmpty(permiso.Puesto) ? "No especificado" : permiso.Puesto)</dd>
-
-                        <dt class="col-sm-4">Condición:</dt>
-                        <dd class="col-sm-8">@(string.IsNullOrEmpty(permiso.Condicion) ? "No especificada" : permiso.Condicion)</dd>
-                    </dl>
-                </div>
-                <div class="col-md-6">
-                    <h4 class="border-bottom pb-2">Detalles del Permiso</h4>
-                    <dl class="row">
-                        <dt class="col-sm-4">Fecha:</dt>
-                        <dd class="col-sm-8">@permiso.Fecha.ToString("dd/MM/yyyy")</dd>
-
-                        <dt class="col-sm-4">Tipo de Motivo:</dt>
-                        <dd class="col-sm-8">@(string.IsNullOrEmpty(permiso.TipoMotivo) ? "No especificado" : permiso.TipoMotivo)</dd>
-
-                        <dt class="col-sm-4">Motivo:</dt>
-                        <dd class="col-sm-8">@permiso.Motivo</dd>
-
-                        @if (!string.IsNullOrEmpty(permiso.Observaciones))
-                        {
-                            <dt class="col-sm-4">Observaciones:</dt>
-                            <dd class="col-sm-8">@permiso.Observaciones</dd>
-                        }
-                    </dl>
-                </div>
-            </div>
-
-            @if (!string.IsNullOrEmpty(permiso.RutaComprobante))
-            {
-                <div class="row mb-4">
-                    <div class="col-md-12">
-                        <h4 class="border-bottom pb-2">Comprobante</h4>
-                        <div class="text-center">
-                            <img src="@permiso.RutaComprobante" alt="Comprobante" class="img-fluid img-thumbnail" style="max-width: 100%; max-height: 300px;" />
-                        </div>
-                    </div>
-                </div>
-            }
-
-            <div class="card mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">RESOLUCIÓN DE PERMISO</h4>
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    Resolución del Permiso #@Model.PermisoId
                 </div>
                 <div class="card-body">
-                    <p>Quien suscribe, <strong>@Context.Session.GetString("UsuarioNombre")</strong>, en calidad de <strong>Director/a</strong>, con base en las leyes y reglamentos vigentes, responde a solicitud de permiso; bajo la resolución de:</p>
-
                     <form asp-action="Resolve">
                         <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-                        <input type="hidden" asp-for="PermisoId" value="@permiso.Id" />
+                        <input type="hidden" asp-for="PermisoId" />
 
-                        <div class="form-group mb-3">
-                            <div class="form-check mb-2">
-                                <input type="radio" class="form-check-input" asp-for="Resolucion" value="Aceptar lo solicitado" id="resolucionAceptar" />
-                                <label class="form-check-label" for="resolucionAceptar">Aceptar lo solicitado</label>
+                        @if (permiso != null)
+                        {
+                            <div class="card mb-4">
+                                <div class="card-header bg-info text-white">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    Detalles del Permiso
+                                </div>
+                                <div class="card-body">
+                                    <dl class="row">
+                                        <dt class="col-sm-3">Solicitante:</dt>
+                                        <dd class="col-sm-9">@permiso.Usuario?.Nombre</dd>
+
+                                        <dt class="col-sm-3">Tipo de Permiso:</dt>
+                                        <dd class="col-sm-9">@permiso.TipoPermiso</dd>
+
+                                        <dt class="col-sm-3">Fechas:</dt>
+                                        <dd class="col-sm-9">@permiso.FechaInicio.ToShortDateString() - @permiso.FechaFin.ToShortDateString()</dd>
+
+                                        @if (permiso.HoraDesde.HasValue && permiso.HoraHasta.HasValue)
+                                        {
+                                            <dt class="col-sm-3">Horas:</dt>
+                                            <dd class="col-sm-9">@permiso.HoraDesde.Value.ToString(@"hh\:mm") - @permiso.HoraHasta.Value.ToString(@"hh\:mm")</dd>
+                                        }
+                                        @if (permiso.JornadaCompleta)
+                                        {
+                                            <dt class="col-sm-3">Jornada:</dt>
+                                            <dd class="col-sm-9">Jornada Completa</dd>
+                                        }
+                                        @if (permiso.MediaJornada)
+                                        {
+                                            <dt class="col-sm-3">Jornada:</dt>
+                                            <dd class="col-sm-9">Media Jornada</dd>
+                                        }
+                                        @if (permiso.CantidadLecciones.HasValue)
+                                        {
+                                            <dt class="col-sm-3">Cantidad Lecciones:</dt>
+                                            <dd class="col-sm-9">@permiso.CantidadLecciones</dd>
+                                        }
+
+                                        <dt class="col-sm-3">Motivo:</dt>
+                                        <dd class="col-sm-9">@permiso.Motivo</dd>
+
+                                        <dt class="col-sm-3">Estado Actual:</dt>
+                                        <dd class="col-sm-9">
+                                            <span class="badge @(permiso.Estado == "Pendiente" ? "badge-warning" : permiso.Estado == "Aprobado" ? "badge-success" : "badge-danger")">
+                                                @permiso.Estado
+                                            </span>
+                                        </dd>
+                                        <dt class="col-sm-3">Fecha Solicitud:</dt>
+                                        <dd class="col-sm-9">@permiso.FechaSolicitud.ToString("dd/MM/yyyy HH:mm")</dd>
+                                    </dl>
+                                </div>
                             </div>
-                            <div class="form-check mb-2">
-                                <input type="radio" class="form-check-input" asp-for="Resolucion" value="Denegar lo solicitado" id="resolucionDenegar" />
-                                <label class="form-check-label" for="resolucionDenegar">Denegar lo solicitado</label>
-                            </div>
-                            <div class="form-check mb-2">
-                                <input type="radio" class="form-check-input" asp-for="Resolucion" value="Acoger convocatoria" id="resolucionAcoger" />
-                                <label class="form-check-label" for="resolucionAcoger">Acoger convocatoria</label>
-                            </div>
-                            <span asp-validation-for="Resolucion" class="text-danger"></span>
+                        }
+
+                        <div class="form-group">
+                            <label asp-for="NuevoEstado"></label>
+                            <select asp-for="NuevoEstado" class="form-control">
+                                <option value="">-- Seleccione un estado --</option>
+                                <option value="Aprobado">Aprobado</option>
+                                <option value="Rechazado">Rechazado</option>
+                                <option value="Pendiente">Pendiente</option>
+                                <option value="Justificado">Justificado</option>
+                            </select>
+                            <span asp-validation-for="NuevoEstado" class="text-danger"></span>
                         </div>
-
-                        <div class="form-group mb-3" id="tipoRebajoGroup">
-                            <label class="form-label">Tipo de Rebajo:</label>
-                            <div class="form-check mb-2">
-                                <input type="radio" class="form-check-input" asp-for="TipoRebajo" value="Con rebajo salarial parcial" id="rebajoParcial" />
-                                <label class="form-check-label" for="rebajoParcial">Aceptar con rebajo salarial parcial</label>
-                            </div>
-                            <div class="form-check mb-2">
-                                <input type="radio" class="form-check-input" asp-for="TipoRebajo" value="Con rebajo salarial total" id="rebajoTotal" />
-                                <label class="form-check-label" for="rebajoTotal">Aceptar con rebajo salarial total</label>
-                            </div>
-                            <div class="form-check mb-2">
-                                <input type="radio" class="form-check-input" asp-for="TipoRebajo" value="Sin rebajo salarial" id="sinRebajo" />
-                                <label class="form-check-label" for="sinRebajo">Aceptar sin rebajo salarial</label>
-                            </div>
+                        <div class="form-group">
+                            <label asp-for="ComentariosAprobador"></label>
+                            <textarea asp-for="ComentariosAprobador" class="form-control" rows="5"></textarea>
+                            <span asp-validation-for="ComentariosAprobador" class="text-danger"></span>
+                        </div>
+                        <div class="form-group">
+                            <label asp-for="TipoRebajo"></label>
+                            <input asp-for="TipoRebajo" class="form-control" />
                             <span asp-validation-for="TipoRebajo" class="text-danger"></span>
                         </div>
-
-                        <div class="form-group mb-3">
-                            <label asp-for="ObservacionesResolucion" class="form-label">Observaciones:</label>
-                            <textarea asp-for="ObservacionesResolucion" class="form-control" rows="3"></textarea>
-                            <span asp-validation-for="ObservacionesResolucion" class="text-danger"></span>
-                        </div>
-
-                        <div class="form-group mt-4">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save"></i> Guardar Resolución
-                            </button>
-                            <a asp-action="Index" class="btn btn-secondary">
-                                <i class="fas fa-times"></i> Cancelar
-                            </a>
+                        <div class="form-group mt-3">
+                            <button type="submit" class="btn btn-primary">Guardar Resolución</button>
+                            <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
                         </div>
                     </form>
                 </div>
@@ -126,33 +106,12 @@
     </div>
 </div>
 
+<div>
+    <a asp-action="Index">Volver a la Lista</a>
+</div>
+
 @section Scripts {
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Mostrar/ocultar opciones de rebajo según la resolución
-            const resolucionAceptar = document.getElementById('resolucionAceptar');
-            const resolucionDenegar = document.getElementById('resolucionDenegar');
-            const resolucionAcoger = document.getElementById('resolucionAcoger');
-            const tipoRebajoGroup = document.getElementById('tipoRebajoGroup');
-
-            function updateTipoRebajoVisibility() {
-                if (resolucionAceptar.checked || resolucionAcoger.checked) {
-                    tipoRebajoGroup.style.display = 'block';
-                } else {
-                    tipoRebajoGroup.style.display = 'none';
-                }
-            }
-
-            resolucionAceptar.addEventListener('change', updateTipoRebajoVisibility);
-            resolucionDenegar.addEventListener('change', updateTipoRebajoVisibility);
-            resolucionAcoger.addEventListener('change', updateTipoRebajoVisibility);
-
-            // Inicializar estado
-            updateTipoRebajoVisibility();
-        });
-    </script>
 }
-

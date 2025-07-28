@@ -5,38 +5,18 @@ namespace SistemaPermisos.ViewModels
 {
     public class ManagePermissionsViewModel
     {
-        public int UsuarioId { get; set; }
+        public int UserId { get; set; }
 
-        [Display(Name = "Nombre")]
-        public string Nombre { get; set; }
+        [Display(Name = "Nombre de Usuario")]
+        public string UserName { get; set; } = string.Empty;
 
-        [Display(Name = "Permisos")]
-        public List<string> Permisos { get; set; } = new List<string>();
+        [Display(Name = "Permisos del Usuario")]
+        public List<string> UserPermissions { get; set; } = new List<string>();
 
-        // Lista de todos los permisos disponibles en el sistema
-        public static List<string> PermisosDisponibles => new List<string>
-        {
-            "usuarios.ver",
-            "usuarios.crear",
-            "usuarios.editar",
-            "usuarios.eliminar",
-            "permisos.ver",
-            "permisos.crear",
-            "permisos.editar",
-            "permisos.aprobar",
-            "permisos.rechazar",
-            "omisiones.ver",
-            "omisiones.crear",
-            "omisiones.editar",
-            "omisiones.aprobar",
-            "omisiones.rechazar",
-            "reportes.ver",
-            "reportes.crear",
-            "reportes.editar",
-            "reportes.resolver",
-            "auditoria.ver",
-            "exportar.excel",
-            "exportar.pdf"
-        };
+        [Display(Name = "Todos los Permisos Disponibles")]
+        public List<string> AllPermissions { get; set; } = new List<string>();
+
+        // Propiedad para recibir los permisos seleccionados desde el formulario
+        public List<string> SelectedPermissions { get; set; } = new List<string>();
     }
 }

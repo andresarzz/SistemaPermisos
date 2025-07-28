@@ -1,67 +1,141 @@
-﻿using System;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using SistemaPermisos.Data;
 using SistemaPermisos.Models;
-using SistemaPermisos.ViewModels;
+using SistemaPermisos.Repositories;
 using SistemaPermisos.Services;
-using Microsoft.AspNetCore.Hosting;
+using SistemaPermisos.ViewModels;
+using System.IO;
+using System.Security.Claims;
+using System.Threading.Tasks;
 
 namespace SistemaPermisos.Controllers
 {
+    [Authorize]
     public class ReportesController : Controller
     {
-        private readonly ApplicationDbContext _context;
-        private readonly IWebHostEnvironment _hostEnvironment;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly IAuditService _auditService;
+        private readonly IUserService _userService;
 
-        public ReportesController(
-            ApplicationDbContext context,
-            IWebHostEnvironment hostEnvironment,
-            IAuditService auditService)
+        public ReportesController(IUnitOfWork unitOfWork, IAuditService auditService, IUserService userService)
         {
-            _context = context;
-            _hostEnvironment = hostEnvironment;
+            _unitOfWork = unitOfWork;
             _auditService = auditService;
+            _userService = userService;
         }
 
-        // GET: Reportes
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(int pageNumber = 1, int pageSize = 10, string? searchString = null, string? currentFilter = null)
         {
-            // Verificar si el usuario está autenticado
-            var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
-            if (usuarioId == null)
+            if (searchString != null)
             {
-                return RedirectToAction("Login", "Account");
+                pageNumber = 1;
+            }
+            else
+            {
+                searchString = currentFilter;
             }
 
-            var rol = HttpContext.Session.GetString("UsuarioRol");
+            ViewData["CurrentFilter"] = searchString;
 
-            // Si es administrador, mostrar todos los reportes
-            if (rol == "Admin")
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userRole = await _userService.GetUserRole(int.Parse(userId!));
+
+            IQueryable<ReporteDano> reportes;
+
+            if (userRole == "Admin" || userRole == "Supervisor")
             {
-                var reportes = await _context.ReportesDanos
-                    .Include(r => r.Usuario)
-                    .OrderByDescending(r => r.FechaReporte)
-                    .ToListAsync();
-                return View(reportes);
+                reportes = _unitOfWork.ReportesDano.GetAll().OrderByDescending(r => r.FechaReporte);
+            }
+            else // Docente
+            {
+                reportes = _unitOfWork.ReportesDano.Find(r => r.UsuarioId == int.Parse(userId!)).OrderByDescending(r => r.FechaReporte);
             }
 
-            // Si es docente, mostrar solo sus reportes
-            var misReportes = await _context.ReportesDanos
-                .Include(r => r.Usuario)
-                .Where(r => r.UsuarioId == usuarioId)
-                .OrderByDescending(r => r.FechaReporte)
-                .ToListAsync();
+            if (!string.IsNullOrEmpty(searchString))
+            {
+                reportes = reportes.Where(r => r.TipoDano.Contains(searchString) ||
+                                                r.Descripcion.Contains(searchString) ||
+                                                r.Equipo.Contains(searchString) ||
+                                                r.Ubicacion!.Contains(searchString) ||
+                                                r.Estado.Contains(searchString));
+            }
 
-            return View(misReportes);
+            var paginatedList = await PaginatedList<ReporteDano>.CreateAsync(reportes.AsNoTracking(), pageNumber, pageSize);
+
+            // Eager load related user for display
+            foreach (var reporte in paginatedList)
+            {
+                reporte.Usuario = await _userService.GetUserById(reporte.UsuarioId);
+                if (reporte.ResueltoPorId.HasValue)
+                {
+                    reporte.ResueltoPor = await _userService.GetUserById(reporte.ResueltoPorId.Value);
+                }
+            }
+
+            return View(paginatedList);
         }
 
-        // GET: Reportes/Details/5
+        [HttpGet]
+        public IActionResult Create()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create(ReporteViewModel model)
+        {
+            if (ModelState.IsValid)
+            {
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (userId == null)
+                {
+                    ModelState.AddModelError(string.Empty, "Usuario no autenticado.");
+                    return View(model);
+                }
+
+                string? evidenciaPath = null;
+                if (model.Evidencia != null)
+                {
+                    var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "reportes");
+                    if (!Directory.Exists(uploadsFolder))
+                    {
+                        Directory.CreateDirectory(uploadsFolder);
+                    }
+                    var uniqueFileName = Guid.NewGuid().ToString() + "_" + model.Evidencia.FileName;
+                    var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+                    using (var fileStream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await model.Evidencia.CopyToAsync(fileStream);
+                    }
+                    evidenciaPath = Path.Combine("/uploads", "reportes", uniqueFileName);
+                }
+
+                var reporte = new ReporteDano
+                {
+                    UsuarioId = int.Parse(userId),
+                    TipoDano = model.TipoDano,
+                    Descripcion = model.Descripcion,
+                    FechaReporte = model.FechaReporte,
+                    Equipo = model.Equipo,
+                    Ubicacion = model.Ubicacion,
+                    Observaciones = model.Observaciones,
+                    RutaEvidencia = evidenciaPath,
+                    Estado = "Pendiente"
+                };
+
+                await _unitOfWork.ReportesDano.AddAsync(reporte);
+                await _unitOfWork.SaveAsync();
+
+                await _auditService.LogAction(int.Parse(userId), "Crear Reporte de Daño", $"Reporte de daño '{reporte.TipoDano}' creado (ID: {reporte.Id}).");
+                TempData["SuccessMessage"] = "Reporte de daño creado exitosamente.";
+                return RedirectToAction(nameof(Index));
+            }
+            return View(model);
+        }
+
+        [HttpGet]
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null)
@@ -69,171 +143,86 @@ namespace SistemaPermisos.Controllers
                 return NotFound();
             }
 
-            var reporte = await _context.ReportesDanos
-                .Include(r => r.Usuario)
-                .FirstOrDefaultAsync(m => m.Id == id);
-
+            var reporte = await _unitOfWork.ReportesDano.GetByIdAsync(id.Value);
             if (reporte == null)
             {
                 return NotFound();
             }
 
-            // Verificar que el usuario tenga acceso a este reporte
-            var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
-            var rol = HttpContext.Session.GetString("UsuarioRol");
-
-            if (usuarioId == null || (reporte.UsuarioId != usuarioId && rol != "Admin"))
+            reporte.Usuario = await _userService.GetUserById(reporte.UsuarioId);
+            if (reporte.ResueltoPorId.HasValue)
             {
-                return RedirectToAction("Login", "Account");
+                reporte.ResueltoPor = await _userService.GetUserById(reporte.ResueltoPorId.Value);
+            }
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userRole = await _userService.GetUserRole(int.Parse(userId!));
+
+            if (userRole == "Docente" && reporte.UsuarioId != int.Parse(userId!))
+            {
+                return Forbid(); // Docentes can only view their own reports
             }
 
             return View(reporte);
         }
 
-        // GET: Reportes/Create
-        public IActionResult Create()
+        [HttpGet]
+        [Authorize(Policy = "SupervisorPolicy")]
+        public async Task<IActionResult> Resolve(int? id)
         {
-            // Verificar si el usuario está autenticado
-            var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
-            if (usuarioId == null)
-            {
-                return RedirectToAction("Login", "Account");
-            }
-
-            return View();
-        }
-
-        // POST: Reportes/Create
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(ReporteViewModel model)
-        {
-            try
-            {
-                // Verificar si el usuario está autenticado
-                var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
-                if (usuarioId == null)
-                {
-                    return RedirectToAction("Login", "Account");
-                }
-
-                Console.WriteLine($"ModelState.IsValid: {ModelState.IsValid}");
-
-                if (!ModelState.IsValid)
-                {
-                    foreach (var error in ModelState)
-                    {
-                        Console.WriteLine($"Error en {error.Key}: {string.Join(", ", error.Value.Errors.Select(e => e.ErrorMessage))}");
-                    }
-                    return View(model);
-                }
-
-                // Procesar la imagen del reporte
-                string? rutaImagen = null;
-                if (model.Imagen != null && model.Imagen.Length > 0)
-                {
-                    string uploadsFolder = Path.Combine(_hostEnvironment.WebRootPath, "uploads", "reportes");
-
-                    // Asegurar que el directorio existe
-                    if (!Directory.Exists(uploadsFolder))
-                    {
-                        Directory.CreateDirectory(uploadsFolder);
-                    }
-
-                    string uniqueFileName = Guid.NewGuid().ToString() + "_" + model.Imagen.FileName;
-                    string filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                    using (var fileStream = new FileStream(filePath, FileMode.Create))
-                    {
-                        await model.Imagen.CopyToAsync(fileStream);
-                    }
-
-                    rutaImagen = "/uploads/reportes/" + uniqueFileName;
-                }
-
-                var reporte = new ReporteDano
-                {
-                    UsuarioId = usuarioId.Value,
-                    Equipo = model.Equipo ?? string.Empty,
-                    Ubicacion = model.Ubicacion ?? string.Empty,
-                    Descripcion = model.Descripcion ?? string.Empty,
-                    RutaImagen = rutaImagen,
-                    Estado = "Pendiente",
-                    FechaReporte = DateTime.Now
-                };
-
-                _context.Add(reporte);
-                await _context.SaveChangesAsync();
-
-                Console.WriteLine($"Reporte guardado con ID: {reporte.Id}");
-
-                // Registrar en auditoría
-                try
-                {
-                    await _auditService.LogActivityAsync(
-                        usuarioId,
-                        "Crear",
-                        "ReporteDano",
-                        reporte.Id,
-                        null,
-                        $"Nuevo reporte: {reporte.Equipo} - {reporte.Ubicacion}"
-                    );
-                }
-                catch (Exception auditEx)
-                {
-                    Console.WriteLine($"Error en auditoría: {auditEx.Message}");
-                    // No fallar por error de auditoría
-                }
-
-                TempData["Success"] = "Reporte enviado exitosamente";
-                return RedirectToAction(nameof(Index));
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error al crear reporte: {ex.Message}");
-                ModelState.AddModelError("", "Ocurrió un error al procesar su solicitud. Por favor, inténtelo de nuevo.");
-                return View(model);
-            }
-        }
-
-        // GET: Reportes/MarkAsResolved/5 (Solo para administradores)
-        public async Task<IActionResult> MarkAsResolved(int? id)
-        {
-            // Verificar que sea administrador
-            var rol = HttpContext.Session.GetString("UsuarioRol");
-            if (rol != "Admin")
-            {
-                return RedirectToAction("Index", "Home");
-            }
-
             if (id == null)
             {
                 return NotFound();
             }
 
-            var reporte = await _context.ReportesDanos.FindAsync(id);
+            var reporte = await _unitOfWork.ReportesDano.GetByIdAsync(id.Value);
             if (reporte == null)
             {
                 return NotFound();
             }
 
-            reporte.Estado = "Resuelto";
-            reporte.FechaResolucion = DateTime.Now;
-            reporte.ResueltoPor = HttpContext.Session.GetString("UsuarioNombre");
+            var model = new ResolucionReporteViewModel
+            {
+                ReporteId = reporte.Id,
+                NuevoEstado = reporte.Estado,
+                ComentariosResolucion = reporte.ObservacionesResolucion
+            };
+            return View(model);
+        }
 
-            await _context.SaveChangesAsync();
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = "SupervisorPolicy")]
+        public async Task<IActionResult> Resolve(ResolucionReporteViewModel model)
+        {
+            if (ModelState.IsValid)
+            {
+                var reporte = await _unitOfWork.ReportesDano.GetByIdAsync(model.ReporteId);
+                if (reporte == null)
+                {
+                    return NotFound();
+                }
 
-            // Registrar en auditoría
-            await _auditService.LogActivityAsync(
-                HttpContext.Session.GetInt32("UsuarioId"),
-                "Actualizar",
-                "ReporteDano",
-                reporte.Id,
-                "Estado anterior: Pendiente",
-                "Nuevo estado: Resuelto"
-            );
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (userId == null)
+                {
+                    ModelState.AddModelError(string.Empty, "Usuario no autenticado.");
+                    return View(model);
+                }
 
-            return RedirectToAction(nameof(Index));
+                reporte.Estado = model.NuevoEstado;
+                reporte.ObservacionesResolucion = model.ComentariosResolucion;
+                reporte.FechaResolucion = DateTime.Now;
+                reporte.ResueltoPorId = int.Parse(userId);
+
+                _unitOfWork.ReportesDano.Update(reporte);
+                await _unitOfWork.SaveAsync();
+
+                await _auditService.LogAction(int.Parse(userId), "Resolver Reporte de Daño", $"Reporte de daño (ID: {reporte.Id}) resuelto a estado '{reporte.Estado}'.");
+                TempData["SuccessMessage"] = "Reporte de daño resuelto exitosamente.";
+                return RedirectToAction(nameof(Index));
+            }
+            return View(model);
         }
     }
 }

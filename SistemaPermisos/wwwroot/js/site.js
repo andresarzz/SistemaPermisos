@@ -1,81 +1,76 @@
-﻿// Función para mostrar/ocultar contraseña
-function togglePasswordVisibility(inputId, toggleId) {
-    const passwordInput = document.getElementById(inputId)
-    const toggleIcon = document.getElementById(toggleId)
+﻿// Please see documentation at https://docs.microsoft.com/aspnet/core/client-side/bundling-and-minification
+// for details on configuring this project to bundle and minify static web assets.
 
-    if (passwordInput && toggleIcon) {
-        if (passwordInput.type === "password") {
-            passwordInput.type = "text"
-            toggleIcon.classList.remove("fa-eye")
-            toggleIcon.classList.add("fa-eye-slash")
-        } else {
-            passwordInput.type = "password"
-            toggleIcon.classList.remove("fa-eye-slash")
-            toggleIcon.classList.add("fa-eye")
-        }
-    }
-}
+// Write your JavaScript code.
 
-// Función para previsualizar imágenes antes de subirlas
-function previewImage(input, previewId, placeholderId) {
-    const preview = document.getElementById(previewId)
-    const placeholder = placeholderId ? document.getElementById(placeholderId) : null
-
-    if (preview && input.files && input.files[0]) {
-        const reader = new FileReader()
-
-        reader.onload = (e) => {
-            preview.src = e.target.result
-            preview.style.display = "block"
-            if (placeholder) {
-                placeholder.style.display = "none"
-            }
-        }
-
-        reader.readAsDataURL(input.files[0])
-    }
-}
-
-// Inicializar componentes cuando el DOM esté cargado
+// Example for displaying TempData messages as alerts
 document.addEventListener("DOMContentLoaded", () => {
-    // Inicializar tooltips
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-    tooltipTriggerList.forEach((tooltipTriggerEl) => {
-        new bootstrap.Tooltip(tooltipTriggerEl)
-    })
+    const successMessage = '@TempData["SuccessMessage"]'
+    const errorMessage = '@TempData["ErrorMessage"]'
 
-    // Añadir listeners para previsualización de imágenes
-    const imageInputs = document.querySelectorAll(".image-upload")
-    imageInputs.forEach((input) => {
-        const previewId = input.getAttribute("data-preview")
-        const placeholderId = input.getAttribute("data-placeholder")
-        if (previewId) {
-            input.addEventListener("change", function () {
-                previewImage(this, previewId, placeholderId)
-            })
-        }
-    })
-
-    // Inicializar dropdowns de Bootstrap
-    var dropdownElementList = [].slice.call(document.querySelectorAll(".dropdown-toggle"))
-    dropdownElementList.forEach((dropdownToggleEl) => {
-        new bootstrap.Dropdown(dropdownToggleEl)
-    })
-
-    // Cerrar alertas automáticamente después de 5 segundos
-    const alerts = document.querySelectorAll(".alert:not(.alert-permanent)")
-    alerts.forEach((alert) => {
-        setTimeout(() => {
-            const closeButton = alert.querySelector(".btn-close")
-            if (closeButton) {
-                closeButton.click()
-            } else {
-                alert.classList.add("fade")
-                setTimeout(() => {
-                    alert.style.display = "none"
-                }, 150)
-            }
-        }, 5000)
-    })
+    if (successMessage && successMessage !== "") {
+        alert(successMessage) // Or use a more sophisticated notification system
+    }
+    if (errorMessage && errorMessage !== "") {
+        alert(errorMessage) // Or use a more sophisticated notification system
+    }
 })
 
+// Example for handling file input display
+document
+    .querySelectorAll(".custom-file-input")
+    .forEach((input) => {
+        input.addEventListener("change", (e) => {
+            var fileName = e.target.files[0].name
+            var nextSibling = e.target.nextElementSibling
+            if (nextSibling && nextSibling.classList.contains("custom-file-label")) {
+                nextSibling.innerText = fileName
+            }
+        })
+    })
+
+    // Example for date pickers (if using a library like jQuery UI or flatpickr)
+    // $(function () {
+    //     $(".datepicker").datepicker({
+    //         dateFormat: "yy-mm-dd"
+    //     });
+    // });
+
+    // Example for time pickers (if using a library)
+    // $(function () {
+    //     $(".timepicker").timepicker({
+    //         timeFormat: 'H:i',
+    //         interval: 15,
+    //         minTime: '08:00',
+    //         maxTime: '18:00',
+    //         defaultTime: '9',
+    //         startTime: '08:00',
+    //         dynamic: false,
+    //         dropdown: true,
+    //         scrollbar: true
+    //     });
+    // });
+
+    // General form validation feedback (if not using client-side validation frameworks)
+    ; (() => {
+        window.addEventListener(
+            "load",
+            () => {
+                var forms = document.getElementsByClassName("needs-validation")
+                var validation = Array.prototype.filter.call(forms, (form) => {
+                    form.addEventListener(
+                        "submit",
+                        (event) => {
+                            if (form.checkValidity() === false) {
+                                event.preventDefault()
+                                event.stopPropagation()
+                            }
+                            form.classList.add("was-validated")
+                        },
+                        false,
+                    )
+                })
+            },
+            false,
+        )
+    })()

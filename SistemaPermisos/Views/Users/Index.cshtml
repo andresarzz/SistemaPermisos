@@ -1,213 +1,95 @@
-﻿@model IEnumerable<SistemaPermisos.Models.Usuario>
+﻿@model SistemaPermisos.Models.PaginatedList<SistemaPermisos.Models.Usuario>
+
 @{
-    ViewData["Title"] = "Usuarios";
-    var currentFilter = ViewData["CurrentFilter"] as string;
-    var roleFilter = ViewData["RoleFilter"] as string;
-    var currentSort = ViewData["CurrentSort"] as string;
-    var nameSortParm = ViewData["NameSortParm"] as string;
-    var roleSortParm = ViewData["RoleSortParm"] as string;
-    var dateSortParm = ViewData["DateSortParm"] as string;
-    var currentPage = ViewBag.CurrentPage;
-    var totalPages = ViewBag.TotalPages;
-    var hasPreviousPage = ViewBag.HasPreviousPage;
-    var hasNextPage = ViewBag.HasNextPage;
+    ViewData["Title"] = "Gestión de Usuarios";
 }
 
-<div class="container-fluid">
-    <h1 class="mt-4">Gestión de Usuarios</h1>
-    <p class="lead">Administre los usuarios del sistema.</p>
+<div class="container mt-4">
+    <h2 class="mb-4">Gestión de Usuarios</h2>
 
-    <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
-            <i class="fas fa-users mr-1"></i>
-            Usuarios
-            <div class="float-right">
-                <a asp-action="Create" class="btn btn-success btn-sm">
-                    <i class="fas fa-user-plus"></i> Nuevo Usuario
-                </a>
-                <div class="btn-group ml-2">
-                    <button type="button" class="btn btn-light btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        <i class="fas fa-file-export"></i> Exportar
-                    </button>
-                    <div class="dropdown-menu dropdown-menu-right">
-                        <a asp-action="ExportToExcel" asp-route-searchString="@currentFilter" asp-route-roleFilter="@roleFilter" asp-route-sortOrder="@currentSort" class="dropdown-item">
-                            <i class="fas fa-file-excel text-success"></i> Excel
-                        </a>
-                        <a asp-action="ExportToPdf" asp-route-searchString="@currentFilter" asp-route-roleFilter="@roleFilter" asp-route-sortOrder="@currentSort" class="dropdown-item">
-                            <i class="fas fa-file-pdf text-danger"></i> PDF
-                        </a>
-                    </div>
-                </div>
-            </div>
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success" role="alert">
+            @TempData["SuccessMessage"]
         </div>
-        <div class="card-body">
-            <form asp-action="Index" method="get" class="mb-4">
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="input-group">
-                            <div class="input-group-prepend">
-                                <span class="input-group-text"><i class="fas fa-search"></i></span>
-                            </div>
-                            <input type="text" name="searchString" value="@currentFilter" class="form-control" placeholder="Buscar por nombre, correo o cédula" />
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="input-group">
-                            <div class="input-group-prepend">
-                                <span class="input-group-text"><i class="fas fa-filter"></i></span>
-                            </div>
-                            <select name="roleFilter" class="form-control">
-                                <option value="">Todos los roles</option>
-                                <option value="Admin" selected="@(roleFilter == "Admin")">Administrador</option>
-                                <option value="Docente" selected="@(roleFilter == "Docente")">Docente</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-md-2">
-                        <button type="submit" class="btn btn-primary btn-block">
-                            <i class="fas fa-filter"></i> Filtrar
-                        </button>
-                    </div>
-                    <div class="col-md-2">
-                        <a asp-action="Index" class="btn btn-secondary btn-block">
-                            <i class="fas fa-sync"></i> Limpiar
-                        </a>
-                    </div>
-                </div>
-            </form>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger" role="alert">
+            @TempData["ErrorMessage"]
+        </div>
+    }
 
-            <div class="table-responsive">
-                <table class="table table-bordered table-hover">
-                    <thead class="thead-light">
+    <p>
+        <a asp-action="Create" class="btn btn-primary">Crear Nuevo Usuario</a>
+        <a asp-action="AuditLog" class="btn btn-info">Ver Registro de Auditoría</a>
+        <a asp-action="ExportUsers" class="btn btn-success">Exportar a Excel</a>
+    </p>
+
+    <form asp-action="Index" method="get" class="mb-3">
+        <div class="form-actions no-color">
+            <p>
+                Buscar por nombre, email o rol: <input type="text" name="SearchString" value="@ViewData["CurrentFilter"]" />
+                <button type="submit" class="btn btn-sm btn-secondary">Buscar</button> |
+                <a asp-action="Index" class="btn btn-sm btn-outline-secondary">Ver todos</a>
+            </p>
+        </div>
+    </form>
+
+    @if (!Model.Any())
+    {
+        <p class="text-center">No hay usuarios para mostrar.</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Nombre Completo</th>
+                        <th>Nombre de Usuario</th>
+                        <th>Email</th>
+                        <th>Rol</th>
+                        <th>Activo</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
                         <tr>
-                            <th>
-                                <a asp-action="Index" asp-route-sortOrder="@nameSortParm" asp-route-searchString="@currentFilter" asp-route-roleFilter="@roleFilter" class="text-dark">
-                                    Nombre
-                                    @if (string.IsNullOrEmpty(currentSort))
-                                    {
-                                        <i class="fas fa-sort-up ml-1"></i>
-                                    }
-                                    else if (currentSort == "name_desc")
-                                    {
-                                        <i class="fas fa-sort-down ml-1"></i>
-                                    }
-                                    else
-                                    {
-                                        <i class="fas fa-sort ml-1"></i>
-                                    }
-                                </a>
-                            </th>
-                            <th>Correo</th>
-                            <th>
-                                <a asp-action="Index" asp-route-sortOrder="@roleSortParm" asp-route-searchString="@currentFilter" asp-route-roleFilter="@roleFilter" class="text-dark">
-                                    Rol
-                                    @if (currentSort == "Role")
-                                    {
-                                        <i class="fas fa-sort-up ml-1"></i>
-                                    }
-                                    else if (currentSort == "role_desc")
-                                    {
-                                        <i class="fas fa-sort-down ml-1"></i>
-                                    }
-                                    else
-                                    {
-                                        <i class="fas fa-sort ml-1"></i>
-                                    }
-                                </a>
-                            </th>
-                            <th>
-                                <a asp-action="Index" asp-route-sortOrder="@dateSortParm" asp-route-searchString="@currentFilter" asp-route-roleFilter="@roleFilter" class="text-dark">
-                                    Fecha Registro
-                                    @if (currentSort == "Date")
-                                    {
-                                        <i class="fas fa-sort-up ml-1"></i>
-                                    }
-                                    else if (currentSort == "date_desc")
-                                    {
-                                        <i class="fas fa-sort-down ml-1"></i>
-                                    }
-                                    else
-                                    {
-                                        <i class="fas fa-sort ml-1"></i>
-                                    }
-                                </a>
-                            </th>
-                            <th>Estado</th>
-                            <th>Acciones</th>
+                            <td>@Html.DisplayFor(modelItem => item.Nombre) @Html.DisplayFor(modelItem => item.Apellidos)</td>
+                            <td>@Html.DisplayFor(modelItem => item.NombreUsuario)</td>
+                            <td>@Html.DisplayFor(modelItem => item.Email)</td>
+                            <td>@Html.DisplayFor(modelItem => item.Rol)</td>
+                            <td>@(item.IsActive ? "Sí" : "No")</td>
+                            <td>
+                                <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-warning">Editar</a> |
+                                <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-info">Detalles</a> |
+                                <a asp-action="ChangeRole" asp-route-id="@item.Id" class="btn btn-sm btn-primary">Cambiar Rol</a> |
+                                <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-danger">Eliminar</a>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var item in Model)
-                        {
-                            <tr class="@(item.Activo ? "" : "table-danger")">
-                                <td>@item.Nombre</td>
-                                <td>@item.Correo</td>
-                                <td>
-                                    <span class="badge @(item.Rol == "Admin" ? "badge-primary" : "badge-info")">
-                                        @item.Rol
-                                    </span>
-                                </td>
-                                <td>@item.FechaRegistro.ToString("dd/MM/yyyy")</td>
-                                <td>
-                                    @if (item.Activo)
-                                    {
-                                        <span class="badge badge-success">Activo</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge badge-danger">Inactivo</span>
-                                    }
-                                </td>
-                                <td>
-                                    <div class="btn-group">
-                                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-info btn-sm" title="Detalles">
-                                            <i class="fas fa-info-circle"></i>
-                                        </a>
-                                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-primary btn-sm" title="Editar">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                        <a asp-action="ChangeRole" asp-route-id="@item.Id" class="btn btn-warning btn-sm" title="Cambiar Rol">
-                                            <i class="fas fa-user-tag"></i>
-                                        </a>
-                                        <a asp-action="ManagePermissions" asp-route-id="@item.Id" class="btn btn-secondary btn-sm" title="Permisos">
-                                            <i class="fas fa-key"></i>
-                                        </a>
-                                        @if (Context.Session.GetInt32("UsuarioId") != item.Id)
-                                        {
-                                            <a asp-action="ToggleStatus" asp-route-id="@item.Id" class="btn @(item.Activo ? "btn-danger" : "btn-success") btn-sm" title="@(item.Activo ? "Desactivar" : "Activar")">
-                                                <i class="fas @(item.Activo ? "fa-user-slash" : "fa-user-check")"></i>
-                                            </a>
-                                            <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-danger btn-sm" title="Eliminar">
-                                                <i class="fas fa-trash"></i>
-                                            </a>
-                                        }
-                                    </div>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-
-            @if (totalPages > 1)
-            {
-                <nav aria-label="Paginación">
-                    <ul class="pagination justify-content-center">
-                        <li class="page-item @(hasPreviousPage ? "" : "disabled")">
-                            <a class="page-link" asp-action="Index" asp-route-page="@(currentPage - 1)" asp-route-searchString="@currentFilter" asp-route-roleFilter="@roleFilter" asp-route-sortOrder="@currentSort">Anterior</a>
-                        </li>
-                        @for (int i = 1; i <= totalPages; i++)
-                        {
-                            <li class="page-item @(i == currentPage ? "active" : "")">
-                                <a class="page-link" asp-action="Index" asp-route-page="@i" asp-route-searchString="@currentFilter" asp-route-roleFilter="@roleFilter" asp-route-sortOrder="@currentSort">@i</a>
-                            </li>
-                        }
-                        <li class="page-item @(hasNextPage ? "" : "disabled")">
-                            <a class="page-link" asp-action="Index" asp-route-page="@(currentPage + 1)" asp-route-searchString="@currentFilter" asp-route-roleFilter="@roleFilter" asp-route-sortOrder="@currentSort">Siguiente</a>
-                        </li>
-                    </ul>
-                </nav>
-            }
+                    }
+                </tbody>
+            </table>
         </div>
-    </div>
+
+        <nav aria-label="Page navigation example">
+            <ul class="pagination justify-content-center">
+                <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
+                    <a class="page-link" asp-action="Index" asp-route-pageNumber="@(Model.PageIndex - 1)" asp-route-currentFilter="@ViewData["CurrentFilter"]">Anterior</a>
+                </li>
+                @for (int i = 1; i <= Model.TotalPages; i++)
+                {
+                    <li class="page-item @(i == Model.PageIndex ? "active" : "")">
+                        <a class="page-link" asp-action="Index" asp-route-pageNumber="@i" asp-route-currentFilter="@ViewData["CurrentFilter"]">@i</a>
+                    </li>
+                }
+                <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
+                    <a class="page-link" asp-action="Index" asp-route-pageNumber="@(Model.PageIndex + 1)" asp-route-currentFilter="@ViewData["CurrentFilter"]">Siguiente</a>
+                </li>
+            </ul>
+        </nav>
+    }
 </div>

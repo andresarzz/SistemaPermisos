@@ -1,139 +1,143 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using SistemaPermisos.Data;
 using SistemaPermisos.Models;
-using SistemaPermisos.ViewModels;
-using System;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
+using SistemaPermisos.Repositories;
 using SistemaPermisos.Services;
+using SistemaPermisos.ViewModels;
+using System.IO;
+using System.Security.Claims;
+using System.Threading.Tasks;
 
 namespace SistemaPermisos.Controllers
 {
+    [Authorize]
     public class OmisionesController : Controller
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly IAuditService _auditService;
+        private readonly IUserService _userService;
 
-        public OmisionesController(ApplicationDbContext context, IAuditService auditService)
+        public OmisionesController(IUnitOfWork unitOfWork, IAuditService auditService, IUserService userService)
         {
-            _context = context;
+            _unitOfWork = unitOfWork;
             _auditService = auditService;
+            _userService = userService;
         }
 
-        // GET: Omisiones
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(int pageNumber = 1, int pageSize = 10, string? searchString = null, string? currentFilter = null)
         {
-            var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
-            var rol = HttpContext.Session.GetString("UsuarioRol");
-
-            if (usuarioId == null)
+            if (searchString != null)
             {
-                return RedirectToAction("Login", "Account");
+                pageNumber = 1;
+            }
+            else
+            {
+                searchString = currentFilter;
             }
 
-            var query = _context.OmisionesMarca.Include(o => o.Usuario).AsQueryable();
+            ViewData["CurrentFilter"] = searchString;
 
-            // Si no es administrador, solo mostrar sus propias omisiones
-            if (rol != "Admin" && rol != "Director")
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userRole = await _userService.GetUserRole(int.Parse(userId!));
+
+            IQueryable<OmisionMarca> omisiones;
+
+            if (userRole == "Admin" || userRole == "Supervisor")
             {
-                query = query.Where(o => o.UsuarioId == usuarioId);
+                omisiones = _unitOfWork.OmisionesMarca.GetAll().OrderByDescending(o => o.FechaSolicitud);
+            }
+            else // Docente
+            {
+                omisiones = _unitOfWork.OmisionesMarca.Find(o => o.UsuarioId == int.Parse(userId!)).OrderByDescending(o => o.FechaSolicitud);
             }
 
-            var omisiones = await query.OrderByDescending(o => o.FechaRegistro).ToListAsync();
-            return View(omisiones);
+            if (!string.IsNullOrEmpty(searchString))
+            {
+                omisiones = omisiones.Where(o => o.TipoOmision.Contains(searchString) ||
+                                                 o.Motivo.Contains(searchString) ||
+                                                 o.Estado.Contains(searchString));
+            }
+
+            var paginatedList = await PaginatedList<OmisionMarca>.CreateAsync(omisiones.AsNoTracking(), pageNumber, pageSize);
+
+            // Eager load related user for display
+            foreach (var omision in paginatedList)
+            {
+                omision.Usuario = await _userService.GetUserById(omision.UsuarioId);
+                if (omision.AprobadoPorId.HasValue)
+                {
+                    omision.AprobadoPor = await _userService.GetUserById(omision.AprobadoPorId.Value);
+                }
+            }
+
+            return View(paginatedList);
         }
 
-        // GET: Omisiones/Create
+        [HttpGet]
         public IActionResult Create()
         {
-            var viewModel = new OmisionViewModel
-            {
-                FechaOmision = DateTime.Today
-            };
-            return View(viewModel);
+            return View();
         }
 
-        // POST: Omisiones/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(OmisionViewModel viewModel)
+        public async Task<IActionResult> Create(OmisionViewModel model)
         {
-            try
+            if (ModelState.IsValid)
             {
-                var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
-
-                if (usuarioId == null)
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (userId == null)
                 {
-                    return Json(new { error = "Sesión expirada. Por favor, inicie sesión nuevamente." });
+                    ModelState.AddModelError(string.Empty, "Usuario no autenticado.");
+                    return View(model);
                 }
 
-                if (ModelState.IsValid)
+                string? evidenciaPath = null;
+                if (model.Evidencia != null)
                 {
-                    // Mapear ViewModel a Model
-                    var omision = new OmisionMarca
+                    var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "omisiones");
+                    if (!Directory.Exists(uploadsFolder))
                     {
-                        UsuarioId = usuarioId.Value,
-                        FechaOmision = viewModel.FechaOmision,
-                        Cedula = viewModel.Cedula ?? string.Empty,
-                        Puesto = viewModel.Puesto ?? string.Empty,
-                        Instancia = viewModel.Instancia ?? string.Empty,
-                        CategoriaPersonal = viewModel.CategoriaPersonal ?? string.Empty,
-                        Titulo = viewModel.Titulo ?? string.Empty,
-                        TipoOmision = viewModel.TipoOmision ?? string.Empty,
-                        Motivo = viewModel.Motivo ?? string.Empty,
-                        Justificacion = viewModel.Motivo ?? string.Empty, // Usar el mismo valor
-                        FechaRegistro = DateTime.Now,
-                        FechaSolicitud = DateTime.Now,
-                        Estado = "Pendiente"
-                    };
-
-                    _context.Add(omision);
-                    await _context.SaveChangesAsync();
-
-                    // Registrar en auditoría
-                    await _auditService.LogActivityAsync(
-                        usuarioId.Value,
-                        "Crear",
-                        "OmisionMarca",
-                        omision.Id,
-                        null,
-                        $"Nueva omisión de marca: {omision.TipoOmision} - {omision.FechaOmision:dd/MM/yyyy}"
-                    );
-
-                    return Json(new { success = true, message = "Justificación de omisión registrada correctamente." });
-                }
-                else
-                {
-                    // Recopilar errores de validación
-                    var errors = ModelState
-                        .Where(x => x.Value?.Errors.Count > 0)
-                        .Select(x => new { Field = x.Key, Errors = x.Value?.Errors.Select(e => e.ErrorMessage) })
-                        .ToList();
-
-                    return Json(new
+                        Directory.CreateDirectory(uploadsFolder);
+                    }
+                    var uniqueFileName = Guid.NewGuid().ToString() + "_" + model.Evidencia.FileName;
+                    var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+                    using (var fileStream = new FileStream(filePath, FileMode.Create))
                     {
-                        error = "Por favor, corrija los errores en el formulario.",
-                        validationErrors = errors
-                    });
+                        await model.Evidencia.CopyToAsync(fileStream);
+                    }
+                    evidenciaPath = Path.Combine("/uploads", "omisiones", uniqueFileName);
                 }
-            }
-            catch (Exception ex)
-            {
-                // Log del error para debugging
-                Console.WriteLine($"Error en Create Omision: {ex.Message}");
-                Console.WriteLine($"StackTrace: {ex.StackTrace}");
 
-                return Json(new
+                var omision = new OmisionMarca
                 {
-                    error = "Ocurrió un error al procesar su solicitud.",
-                    detail = ex.Message
-                });
+                    UsuarioId = int.Parse(userId),
+                    TipoOmision = model.TipoOmision,
+                    FechaOmision = model.FechaOmision,
+                    HoraOmision = model.HoraOmision,
+                    Motivo = model.Motivo,
+                    Cedula = model.Cedula,
+                    Puesto = model.Puesto,
+                    Instancia = model.Instancia,
+                    CategoriaPersonal = model.CategoriaPersonal,
+                    Titulo = model.Titulo,
+                    RutaEvidencia = evidenciaPath,
+                    FechaSolicitud = DateTime.Now,
+                    Estado = "Pendiente"
+                };
+
+                await _unitOfWork.OmisionesMarca.AddAsync(omision);
+                await _unitOfWork.SaveAsync();
+
+                await _auditService.LogAction(int.Parse(userId), "Crear Omisión de Marca", $"Omisión de marca de tipo '{omision.TipoOmision}' creada (ID: {omision.Id}).");
+                TempData["SuccessMessage"] = "Omisión de marca solicitada exitosamente.";
+                return RedirectToAction(nameof(Index));
             }
+            return View(model);
         }
 
-        // GET: Omisiones/Details/5
+        [HttpGet]
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null)
@@ -141,27 +145,31 @@ namespace SistemaPermisos.Controllers
                 return NotFound();
             }
 
-            var omision = await _context.OmisionesMarca
-                .Include(o => o.Usuario)
-                .FirstOrDefaultAsync(m => m.Id == id);
-
+            var omision = await _unitOfWork.OmisionesMarca.GetByIdAsync(id.Value);
             if (omision == null)
             {
                 return NotFound();
             }
 
-            var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
-            var rol = HttpContext.Session.GetString("UsuarioRol");
-
-            if (rol != "Admin" && rol != "Director" && omision.UsuarioId != usuarioId)
+            omision.Usuario = await _userService.GetUserById(omision.UsuarioId);
+            if (omision.AprobadoPorId.HasValue)
             {
-                return Forbid();
+                omision.AprobadoPor = await _userService.GetUserById(omision.AprobadoPorId.Value);
+            }
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userRole = await _userService.GetUserRole(int.Parse(userId!));
+
+            if (userRole == "Docente" && omision.UsuarioId != int.Parse(userId!))
+            {
+                return Forbid(); // Docentes can only view their own omisiones
             }
 
             return View(omision);
         }
 
-        // GET: Omisiones/Resolve/5
+        [HttpGet]
+        [Authorize(Policy = "SupervisorPolicy")]
         public async Task<IActionResult> Resolve(int? id)
         {
             if (id == null)
@@ -169,118 +177,54 @@ namespace SistemaPermisos.Controllers
                 return NotFound();
             }
 
-            var omision = await _context.OmisionesMarca
-                .Include(o => o.Usuario)
-                .FirstOrDefaultAsync(m => m.Id == id);
-
+            var omision = await _unitOfWork.OmisionesMarca.GetByIdAsync(id.Value);
             if (omision == null)
             {
                 return NotFound();
             }
 
-            // Solo admin puede resolver
-            var rol = HttpContext.Session.GetString("UsuarioRol");
-            if (rol != "Admin" && rol != "Director")
-            {
-                return Forbid();
-            }
-
-            var viewModel = new ResolucionOmisionViewModel
+            var model = new ResolucionOmisionViewModel
             {
                 OmisionId = omision.Id,
-                TipoOmision = omision.TipoOmision ?? string.Empty,
-                FechaOmision = omision.FechaOmision,
-                Motivo = omision.Motivo ?? string.Empty,
-                NombreSolicitante = omision.Usuario?.Nombre ?? "No especificado",
-                Cedula = omision.Cedula,
-                Puesto = omision.Puesto,
-                Instancia = omision.Instancia,
-                CategoriaPersonal = omision.CategoriaPersonal,
-                Titulo = omision.Titulo
+                NuevoEstado = omision.Estado,
+                ComentariosAprobador = omision.ComentariosAprobador
             };
-
-            ViewBag.Omision = omision; // Para compatibilidad con la vista existente
-            return View(viewModel);
+            return View(model);
         }
 
-        // POST: Omisiones/Resolve
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Resolve(ResolucionOmisionViewModel viewModel)
+        [Authorize(Policy = "SupervisorPolicy")]
+        public async Task<IActionResult> Resolve(ResolucionOmisionViewModel model)
         {
-            try
+            if (ModelState.IsValid)
             {
-                var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
-                var rol = HttpContext.Session.GetString("UsuarioRol");
-
-                if (usuarioId == null)
+                var omision = await _unitOfWork.OmisionesMarca.GetByIdAsync(model.OmisionId);
+                if (omision == null)
                 {
-                    return Json(new { error = "Sesión expirada." });
+                    return NotFound();
                 }
 
-                if (rol != "Admin" && rol != "Director")
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (userId == null)
                 {
-                    return Json(new { error = "No tiene permisos para realizar esta acción." });
+                    ModelState.AddModelError(string.Empty, "Usuario no autenticado.");
+                    return View(model);
                 }
 
-                if (ModelState.IsValid)
-                {
-                    var omision = await _context.OmisionesMarca.FindAsync(viewModel.OmisionId);
-                    if (omision == null)
-                    {
-                        return Json(new { error = "Omisión no encontrada." });
-                    }
+                omision.Estado = model.NuevoEstado;
+                omision.ComentariosAprobador = model.ComentariosAprobador;
+                omision.FechaResolucion = DateTime.Now;
+                omision.AprobadoPorId = int.Parse(userId);
 
-                    omision.Estado = viewModel.Resolucion;
-                    omision.Resolucion = viewModel.Resolucion;
-                    omision.ObservacionesResolucion = viewModel.ObservacionesResolucion;
-                    omision.AprobadoPorId = usuarioId.Value;
-                    omision.FechaAprobacion = DateTime.Now;
-                    omision.ComentariosAprobador = viewModel.ObservacionesResolucion;
+                _unitOfWork.OmisionesMarca.Update(omision);
+                await _unitOfWork.SaveAsync();
 
-                    _context.Update(omision);
-                    await _context.SaveChangesAsync();
-
-                    await _auditService.LogActivityAsync(
-                        usuarioId.Value,
-                        "Resolver",
-                        "OmisionMarca",
-                        omision.Id,
-                        null,
-                        $"Omisión resuelta: {viewModel.Resolucion}"
-                    );
-
-                    TempData["SuccessMessage"] = "Omisión resuelta correctamente.";
-                    return RedirectToAction(nameof(Index));
-                }
-
-                // Si hay errores, recargar la omisión para mostrar la vista
-                var omisionReload = await _context.OmisionesMarca
-                    .Include(o => o.Usuario)
-                    .FirstOrDefaultAsync(m => m.Id == viewModel.OmisionId);
-
-                if (omisionReload != null)
-                {
-                    viewModel.TipoOmision = omisionReload.TipoOmision ?? string.Empty;
-                    viewModel.FechaOmision = omisionReload.FechaOmision;
-                    viewModel.Motivo = omisionReload.Motivo ?? string.Empty;
-                    viewModel.NombreSolicitante = omisionReload.Usuario?.Nombre ?? "No especificado";
-                    viewModel.Cedula = omisionReload.Cedula;
-                    viewModel.Puesto = omisionReload.Puesto;
-                    viewModel.Instancia = omisionReload.Instancia;
-                    viewModel.CategoriaPersonal = omisionReload.CategoriaPersonal;
-                    viewModel.Titulo = omisionReload.Titulo;
-
-                    ViewBag.Omision = omisionReload;
-                }
-
-                return View(viewModel);
-            }
-            catch (Exception ex)
-            {
-                TempData["ErrorMessage"] = "Error al procesar la resolución.";
+                await _auditService.LogAction(int.Parse(userId), "Resolver Omisión de Marca", $"Omisión de marca (ID: {omision.Id}) resuelta a estado '{omision.Estado}'.");
+                TempData["SuccessMessage"] = "Omisión de marca resuelta exitosamente.";
                 return RedirectToAction(nameof(Index));
             }
+            return View(model);
         }
     }
 }

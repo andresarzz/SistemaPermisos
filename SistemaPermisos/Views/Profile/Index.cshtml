@@ -4,76 +4,82 @@
     ViewData["Title"] = "Mi Perfil";
 }
 
-<div class="container">
-    <div class="row">
-        <div class="col-md-4">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h4><i class="fas fa-user-circle"></i> Información de Perfil</h4>
-                </div>
-                <div class="card-body text-center">
-                    @if (!string.IsNullOrEmpty(Model.FotoPerfilActual))
+<div class="container mt-4">
+    <h2 class="mb-4">Mi Perfil</h2>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success" role="alert">
+            @TempData["SuccessMessage"]
+        </div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger" role="alert">
+            @TempData["ErrorMessage"]
+        </div>
+    }
+
+    <div class="card">
+        <div class="card-header">
+            Información del Usuario
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4 text-center">
+                    @if (!string.IsNullOrEmpty(Model.FotoPerfilUrl))
                     {
-                        <img src="@Model.FotoPerfilActual" alt="Foto de Perfil" class="img-fluid rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;">
+                        <img src="@Model.FotoPerfilUrl" alt="Foto de Perfil" class="img-fluid rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;">
                     }
                     else
                     {
-                        <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 150px; height: 150px;">
-                            <i class="fas fa-user fa-5x text-white"></i>
-                        </div>
+                        <img src="/images/default-profile.png" alt="Foto de Perfil por defecto" class="img-fluid rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;">
                     }
-                    <h3>@Model.Nombre</h3>
-                    <p class="text-muted">@Model.Rol</p>
-                    <div class="d-grid gap-2">
-                        <a asp-action="Edit" class="btn btn-primary">
-                            <i class="fas fa-edit"></i> Editar Perfil
-                        </a>
-                        <a asp-action="ChangePassword" class="btn btn-secondary">
-                            <i class="fas fa-key"></i> Cambiar Contraseña
-                        </a>
-                        <a asp-action="Activity" class="btn btn-info">
-                            <i class="fas fa-chart-line"></i> Mi Actividad
-                        </a>
-                    </div>
+                    <h4>@Model.Nombre @Model.Apellidos</h4>
+                    <p class="text-muted">@@@Model.NombreUsuario</p>
                 </div>
-            </div>
-        </div>
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">
-                    <h4><i class="fas fa-id-card"></i> Detalles de la Cuenta</h4>
-                </div>
-                <div class="card-body">
-                    @if (TempData["SuccessMessage"] != null)
-                    {
-                        <div class="alert alert-success alert-dismissible fade show" role="alert">
-                            <i class="fas fa-check-circle"></i> @TempData["SuccessMessage"]
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>
-                    }
-
+                <div class="col-md-8">
                     <dl class="row">
-                        <dt class="col-sm-4"><i class="fas fa-envelope"></i> Correo Electrónico:</dt>
-                        <dd class="col-sm-8">@Model.Correo</dd>
+                        <dt class="col-sm-4">@Html.DisplayNameFor(model => model.Email)</dt>
+                        <dd class="col-sm-8">@Html.DisplayFor(model => model.Email)</dd>
 
-                        <dt class="col-sm-4"><i class="fas fa-phone"></i> Teléfono:</dt>
-                        <dd class="col-sm-8">@(string.IsNullOrEmpty(Model.Telefono) ? "No especificado" : Model.Telefono)</dd>
+                        <dt class="col-sm-4">@Html.DisplayNameFor(model => model.Rol)</dt>
+                        <dd class="col-sm-8">@Html.DisplayFor(model => model.Rol)</dd>
 
-                        <dt class="col-sm-4"><i class="fas fa-building"></i> Departamento:</dt>
-                        <dd class="col-sm-8">@(string.IsNullOrEmpty(Model.Departamento) ? "No especificado" : Model.Departamento)</dd>
+                        <dt class="col-sm-4">@Html.DisplayNameFor(model => model.Cedula)</dt>
+                        <dd class="col-sm-8">@Html.DisplayFor(model => model.Cedula)</dd>
 
-                        <dt class="col-sm-4"><i class="fas fa-birthday-cake"></i> Fecha de Nacimiento:</dt>
-                        <dd class="col-sm-8">@(Model.FechaNacimiento.HasValue ? Model.FechaNacimiento.Value.ToString("dd/MM/yyyy") : "No especificada")</dd>
+                        <dt class="col-sm-4">@Html.DisplayNameFor(model => model.Puesto)</dt>
+                        <dd class="col-sm-8">@Html.DisplayFor(model => model.Puesto)</dd>
 
-                        <dt class="col-sm-4"><i class="fas fa-map-marker-alt"></i> Dirección:</dt>
-                        <dd class="col-sm-8">@(string.IsNullOrEmpty(Model.Direccion) ? "No especificada" : Model.Direccion)</dd>
+                        <dt class="col-sm-4">@Html.DisplayNameFor(model => model.Telefono)</dt>
+                        <dd class="col-sm-8">@Html.DisplayFor(model => model.Telefono)</dd>
 
-                        <dt class="col-sm-4"><i class="fas fa-calendar-alt"></i> Fecha de Registro:</dt>
-                        <dd class="col-sm-8">@Model.FechaRegistro.ToString("dd/MM/yyyy")</dd>
+                        <dt class="col-sm-4">@Html.DisplayNameFor(model => model.Departamento)</dt>
+                        <dd class="col-sm-8">@Html.DisplayFor(model => model.Departamento)</dd>
+
+                        <dt class="col-sm-4">@Html.DisplayNameFor(model => model.Direccion)</dt>
+                        <dd class="col-sm-8">@Html.DisplayFor(model => model.Direccion)</dd>
+
+                        <dt class="col-sm-4">@Html.DisplayNameFor(model => model.FechaNacimiento)</dt>
+                        <dd class="col-sm-8">@Model.FechaNacimiento?.ToString("dd/MM/yyyy")</dd>
+
+                        <dt class="col-sm-4">@Html.DisplayNameFor(model => model.FechaRegistro)</dt>
+                        <dd class="col-sm-8">@Model.FechaRegistro.ToString("dd/MM/yyyy HH:mm")</dd>
+
+                        <dt class="col-sm-4">@Html.DisplayNameFor(model => model.UltimoAcceso)</dt>
+                        <dd class="col-sm-8">@Model.UltimoAcceso?.ToString("dd/MM/yyyy HH:mm")</dd>
+
+                        <dt class="col-sm-4">@Html.DisplayNameFor(model => model.Activo)</dt>
+                        <dd class="col-sm-8">@(Model.Activo ? "Sí" : "No")</dd>
                     </dl>
                 </div>
             </div>
         </div>
+        <div class="card-footer text-right">
+            <a asp-action="Edit" class="btn btn-primary">Editar Perfil</a>
+            <a asp-action="ChangePassword" class="btn btn-secondary">Cambiar Contraseña</a>
+            <a asp-action="Activity" class="btn btn-info">Ver Actividad</a>
+        </div>
     </div>
 </div>
-

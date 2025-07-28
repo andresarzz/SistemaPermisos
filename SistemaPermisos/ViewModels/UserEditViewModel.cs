@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Http;
+using System;
 using System.ComponentModel.DataAnnotations;
 
 namespace SistemaPermisos.ViewModels
@@ -12,11 +13,19 @@ namespace SistemaPermisos.ViewModels
         [Display(Name = "Nombre completo")]
         public string Nombre { get; set; } = string.Empty;
 
+        [StringLength(100, ErrorMessage = "Los apellidos no pueden exceder los 100 caracteres")]
+        [Display(Name = "Apellidos")]
+        public string? Apellidos { get; set; }
+
+        [StringLength(50, ErrorMessage = "El nombre de usuario no puede exceder los 50 caracteres")]
+        [Display(Name = "Nombre de Usuario")]
+        public string? NombreUsuario { get; set; }
+
         [Required(ErrorMessage = "El correo es obligatorio")]
         [EmailAddress(ErrorMessage = "El formato del correo no es válido")]
         [StringLength(100, ErrorMessage = "El correo no puede exceder los 100 caracteres")]
         [Display(Name = "Correo electrónico")]
-        public string Correo { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "El rol es obligatorio")]
         [Display(Name = "Rol")]
@@ -56,6 +65,16 @@ namespace SistemaPermisos.ViewModels
         [DataType(DataType.Password)]
         [Display(Name = "Confirmar nueva contraseña")]
         [Compare("NewPassword", ErrorMessage = "Las contraseñas no coinciden")]
-        public string? ConfirmPassword { get; set; }
+        public string? ConfirmNewPassword { get; set; }
+
+        [DataType(DataType.Date)]
+        [Display(Name = "Fecha de Nacimiento")]
+        public DateTime? FechaNacimiento { get; set; }
+
+        [Display(Name = "Foto de Perfil Actual")]
+        public string? FotoPerfilActual { get; set; } // Ruta de la imagen actual
+
+        [Display(Name = "Nueva Foto de Perfil")]
+        public IFormFile? NuevaFotoPerfil { get; set; } // Para subir una nueva imagen
     }
 }

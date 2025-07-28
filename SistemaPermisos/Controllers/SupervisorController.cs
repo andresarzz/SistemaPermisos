@@ -1,76 +1,305 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using SistemaPermisos.Data;
+using SistemaPermisos.Models;
 using SistemaPermisos.Services;
 using SistemaPermisos.ViewModels;
+using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace SistemaPermisos.Controllers
 {
-    public class SupervisorController : Controller
+    [Authorize(Policy = "AdminPolicy")]
+    public class UsersController : Controller
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IUserService _userService;
         private readonly IAuditService _auditService;
+        private readonly IExportService _exportService;
 
-        public SupervisorController(ApplicationDbContext context, IAuditService auditService)
+        public UsersController(IUserService userService, IAuditService auditService, IExportService exportService)
         {
-            _context = context;
+            _userService = userService;
             _auditService = auditService;
+            _exportService = exportService;
         }
 
-        public async Task<IActionResult> Dashboard()
+        public async Task<IActionResult> Index(int pageNumber = 1, int pageSize = 10, string? searchString = null, string? currentFilter = null)
         {
-            // Verificar autenticación y rol
-            var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
-            var usuarioRol = HttpContext.Session.GetString("UsuarioRol");
-
-            if (usuarioId == null || (usuarioRol != "Supervisor" && usuarioRol != "Admin"))
+            if (searchString != null)
             {
-                return RedirectToAction("Login", "Account");
+                pageNumber = 1;
+            }
+            else
+            {
+                searchString = currentFilter;
             }
 
-            // Obtener estadísticas para el dashboard del supervisor
-            var permisosPendientes = await _context.Permisos.CountAsync(p => p.Estado == "Pendiente");
-            var permisosAprobados = await _context.Permisos.CountAsync(p => p.Estado == "Aprobado");
-            var permisosRechazados = await _context.Permisos.CountAsync(p => p.Estado == "Rechazado");
-            var omisionesPendientes = await _context.OmisionesMarca.CountAsync(o => o.Estado == "Pendiente");
+            ViewData["CurrentFilter"] = searchString;
 
-            var viewModel = new SupervisorDashboardViewModel
+            var users = await _userService.GetPaginatedUsers(pageNumber, pageSize, searchString, currentFilter);
+            return View(users);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Create()
+        {
+            ViewBag.Roles = await _userService.GetAllPermissions();
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create(UserCreateViewModel model)
+        {
+            if (ModelState.IsValid)
             {
-                PermisosPendientes = permisosPendientes,
-                PermisosAprobados = permisosAprobados,
-                PermisosRechazados = permisosRechazados,
-                OmisionesPendientes = omisionesPendientes
+                var result = await _userService.CreateUser(model);
+                if (result.Success)
+                {
+                    TempData["SuccessMessage"] = result.Message;
+                    return RedirectToAction(nameof(Index));
+                }
+                ModelState.AddModelError(string.Empty, result.Message);
+            }
+            ViewBag.Roles = await _userService.GetAllPermissions();
+            return View(model);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Edit(int? id)
+        {
+            if (id == null)
+            {
+                return NotFound();
+            }
+
+            var user = await _userService.GetUserById(id.Value);
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            var model = new UserEditViewModel
+            {
+                Id = user.Id,
+                Nombre = user.Nombre,
+                Apellidos = user.Apellidos,
+                NombreUsuario = user.NombreUsuario,
+                Email = user.Email,
+                Rol = user.Rol,
+                Cedula = user.Cedula,
+                Puesto = user.Puesto,
+                Telefono = user.Telefono,
+                Departamento = user.Departamento,
+                Direccion = user.Direccion,
+                Activo = user.IsActive,
+                FechaRegistro = user.FechaRegistro,
+                FechaNacimiento = user.FechaNacimiento,
+                FotoPerfilActual = user.FotoPerfilUrl
             };
 
-            return View(viewModel);
+            ViewBag.Roles = await _userService.GetAllPermissions();
+            return View(model);
         }
 
-        public IActionResult Permisos()
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(UserEditViewModel model)
         {
-            var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
-            var usuarioRol = HttpContext.Session.GetString("UsuarioRol");
-
-            if (usuarioId == null || (usuarioRol != "Supervisor" && usuarioRol != "Admin"))
+            if (ModelState.IsValid)
             {
-                return RedirectToAction("Login", "Account");
+                var result = await _userService.UpdateUser(model);
+                if (result.Success)
+                {
+                    TempData["SuccessMessage"] = result.Message;
+                    return RedirectToAction(nameof(Index));
+                }
+                ModelState.AddModelError(string.Empty, result.Message);
             }
-
-            return RedirectToAction("Index", "Permisos");
+            ViewBag.Roles = await _userService.GetAllPermissions();
+            return View(model);
         }
 
-        public IActionResult Omisiones()
+        [HttpGet]
+        public async Task<IActionResult> Details(int? id)
         {
-            var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
-            var usuarioRol = HttpContext.Session.GetString("UsuarioRol");
-
-            if (usuarioId == null || (usuarioRol != "Supervisor" && usuarioRol != "Admin"))
+            if (id == null)
             {
-                return RedirectToAction("Login", "Account");
+                return NotFound();
             }
 
-            return RedirectToAction("Index", "Omisiones");
+            var user = await _userService.GetUserById(id.Value);
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            var model = new ProfileViewModel
+            {
+                Id = user.Id,
+                Nombre = user.Nombre,
+                Apellidos = user.Apellidos,
+                NombreUsuario = user.NombreUsuario,
+                Email = user.Email,
+                Rol = user.Rol,
+                Cedula = user.Cedula,
+                Puesto = user.Puesto,
+                Telefono = user.Telefono,
+                Departamento = user.Departamento,
+                Direccion = user.Direccion,
+                FechaNacimiento = user.FechaNacimiento,
+                FechaRegistro = user.FechaRegistro,
+                UltimoAcceso = user.UltimoAcceso,
+                Activo = user.IsActive,
+                FotoPerfilUrl = user.FotoPerfilUrl
+            };
+
+            return View(model);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Delete(int? id)
+        {
+            if (id == null)
+            {
+                return NotFound();
+            }
+
+            var user = await _userService.GetUserById(id.Value);
+            if (user == null)
+            {
+                return NotFound();
+            }
+            return View(user);
+        }
+
+        [HttpPost, ActionName("Delete")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteConfirmed(int id)
+        {
+            var result = await _userService.DeleteUser(id);
+            if (result.Success)
+            {
+                TempData["SuccessMessage"] = result.Message;
+                return RedirectToAction(nameof(Index));
+            }
+            TempData["ErrorMessage"] = result.Message;
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ChangeRole(int? id)
+        {
+            if (id == null)
+            {
+                return NotFound();
+            }
+
+            var user = await _userService.GetUserById(id.Value);
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            var model = new ChangeRoleViewModel
+            {
+                UserId = user.Id,
+                NewRole = user.Rol
+            };
+
+            ViewBag.Roles = await _userService.GetAllPermissions();
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ChangeRole(ChangeRoleViewModel model)
+        {
+            if (ModelState.IsValid)
+            {
+                var result = await _userService.ChangeUserRole(model);
+                if (result.Success)
+                {
+                    TempData["SuccessMessage"] = result.Message;
+                    return RedirectToAction(nameof(Index));
+                }
+                ModelState.AddModelError(string.Empty, result.Message);
+            }
+            ViewBag.Roles = await _userService.GetAllPermissions();
+            return View(model);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ManagePermissions(int? id)
+        {
+            if (id == null)
+            {
+                return NotFound();
+            }
+
+            var user = await _userService.GetUserById(id.Value);
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            var model = new ManagePermissionsViewModel
+            {
+                UserId = user.Id,
+                UserName = user.NombreUsuario,
+                UserPermissions = await _userService.GetUserPermissions(user.Id),
+                AllPermissions = await _userService.GetAllPermissions(),
+                SelectedPermissions = await _userService.GetUserPermissions(user.Id) // Pre-select current role
+            };
+
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ManagePermissions(ManagePermissionsViewModel model)
+        {
+            if (ModelState.IsValid)
+            {
+                var result = await _userService.ManagePermissions(model);
+                if (result.Success)
+                {
+                    TempData["SuccessMessage"] = result.Message;
+                    return RedirectToAction(nameof(Index));
+                }
+                ModelState.AddModelError(string.Empty, result.Message);
+            }
+            var user = await _userService.GetUserById(model.UserId);
+            if (user != null)
+            {
+                model.UserName = user.NombreUsuario;
+                model.UserPermissions = await _userService.GetUserPermissions(user.Id);
+            }
+            model.AllPermissions = await _userService.GetAllPermissions();
+            return View(model);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> AuditLog(int pageNumber = 1, int pageSize = 10)
+        {
+            var auditLogs = _unitOfWork.AuditLogs.GetAll().OrderByDescending(a => a.FechaHora);
+            var paginatedList = await PaginatedList<AuditLog>.CreateAsync(auditLogs.AsNoTracking(), pageNumber, pageSize);
+
+            // Eager load related user for display
+            foreach (var log in paginatedList)
+            {
+                log.Usuario = await _userService.GetUserById(log.UsuarioId);
+            }
+
+            return View(paginatedList);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ExportUsers()
+        {
+            var users = await _userService.GetPaginatedUsers(1, int.MaxValue, null, null); // Get all users
+            var fileContents = _exportService.ExportUsersToExcel(users.ToList());
+            return File(fileContents, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Usuarios.xlsx");
         }
     }
 }

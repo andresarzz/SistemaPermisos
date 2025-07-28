@@ -1,95 +1,99 @@
 ﻿@model SistemaPermisos.Models.OmisionMarca
 
 @{
-    ViewData["Title"] = "Detalles de Omisión de Marca";
-    var esAdmin = Context.Session.GetString("UsuarioRol") == "Admin";
+    ViewData["Title"] = "Detalles de Omisión";
 }
 
-<div class="container">
-    <div class="card mb-4">
+<div class="container mt-4">
+    <h2 class="mb-4">Detalles de Omisión de Marca</h2>
+
+    <div class="card">
         <div class="card-header">
-            <h1><i class="fas fa-clock"></i> @ViewData["Title"]</h1>
+            Información de la Omisión #@Model.Id
         </div>
         <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <h4 class="border-bottom pb-2">Información del Solicitante</h4>
-                    <dl class="row">
-                        <dt class="col-sm-4">Nombre:</dt>
-                        <dd class="col-sm-8">@Model.Usuario.Nombre</dd>
-
-                        <dt class="col-sm-4">Cédula:</dt>
-                        <dd class="col-sm-8">@(string.IsNullOrEmpty(Model.Cedula) ? "No especificada" : Model.Cedula)</dd>
-
-                        <dt class="col-sm-4">Puesto:</dt>
-                        <dd class="col-sm-8">@(string.IsNullOrEmpty(Model.Puesto) ? "No especificado" : Model.Puesto)</dd>
-
-                        <dt class="col-sm-4">Instancia:</dt>
-                        <dd class="col-sm-8">@(string.IsNullOrEmpty(Model.Instancia) ? "No especificada" : Model.Instancia)</dd>
-                    </dl>
-                </div>
-                <div class="col-md-6">
-                    <h4 class="border-bottom pb-2">Información de la Solicitud</h4>
-                    <dl class="row">
-                        <dt class="col-sm-4">Fecha de Registro:</dt>
-                        <dd class="col-sm-8">@Model.FechaRegistro.ToString("dd/MM/yyyy HH:mm")</dd>
-
-                        <dt class="col-sm-4">Estado:</dt>
-                        <dd class="col-sm-8">
-                            <span class="badge @(Model.Estado == "Aprobado" ? "bg-success" : (Model.Estado == "Rechazado" ? "bg-danger" : "bg-warning"))">
-                                @Model.Estado
-                            </span>
-                        </dd>
-
-                        <dt class="col-sm-4">Categoría:</dt>
-                        <dd class="col-sm-8">@(string.IsNullOrEmpty(Model.CategoriaPersonal) ? "No especificada" : Model.CategoriaPersonal)</dd>
-
-                        <dt class="col-sm-4">Título:</dt>
-                        <dd class="col-sm-8">@(string.IsNullOrEmpty(Model.Titulo) ? "No especificado" : Model.Titulo)</dd>
-                    </dl>
-                </div>
-            </div>
-
-            <h4 class="border-bottom pb-2 mt-4">Detalles de la Omisión</h4>
             <dl class="row">
-                <dt class="col-sm-3">Fecha de Omisión:</dt>
+                <dt class="col-sm-3">Usuario</dt>
+                <dd class="col-sm-9">@Model.Usuario?.Nombre @Model.Usuario?.Apellidos (@Model.Usuario?.NombreUsuario)</dd>
+
+                <dt class="col-sm-3">Tipo de Omisión</dt>
+                <dd class="col-sm-9">@Html.DisplayFor(model => model.TipoOmision)</dd>
+
+                <dt class="col-sm-3">Fecha de Omisión</dt>
                 <dd class="col-sm-9">@Model.FechaOmision.ToString("dd/MM/yyyy")</dd>
 
-                <dt class="col-sm-3">Tipo de Omisión:</dt>
-                <dd class="col-sm-9">@Model.TipoOmision</dd>
+                <dt class="col-sm-3">Hora de Omisión</dt>
+                <dd class="col-sm-9">@Model.HoraOmision.ToString(@"hh\:mm")</dd>
 
-                <dt class="col-sm-3">Justificación:</dt>
-                <dd class="col-sm-9">@Model.Motivo</dd>
-            </dl>
+                <dt class="col-sm-3">Motivo</dt>
+                <dd class="col-sm-9">@Html.DisplayFor(model => model.Motivo)</dd>
 
-            @if (!string.IsNullOrEmpty(Model.Resolucion))
-            {
-                <h4 class="border-bottom pb-2 mt-4">Resolución de la Justificación</h4>
-                <dl class="row">
-                    <dt class="col-sm-3">Resolución:</dt>
-                    <dd class="col-sm-9">@Model.Resolucion</dd>
+                <dt class="col-sm-3">Estado</dt>
+                <dd class="col-sm-9">@Html.DisplayFor(model => model.Estado)</dd>
 
-                    @if (!string.IsNullOrEmpty(Model.ObservacionesResolucion))
-                    {
-                        <dt class="col-sm-3">Observaciones:</dt>
-                        <dd class="col-sm-9">@Model.ObservacionesResolucion</dd>
-                    }
-                </dl>
-            }
+                <dt class="col-sm-3">Fecha de Solicitud</dt>
+                <dd class="col-sm-9">@Model.FechaSolicitud.ToString("dd/MM/yyyy HH:mm")</dd>
 
-            <div class="mt-4">
-                @if (esAdmin && Model.Estado == "Pendiente")
+                @if (!string.IsNullOrEmpty(Model.Cedula))
                 {
-                    <a asp-action="Resolve" asp-route-id="@Model.Id" class="btn btn-primary">
-                        <i class="fas fa-gavel"></i> Resolver Justificación
-                    </a>
+                    <dt class="col-sm-3">Cédula</dt>
+                    <dd class="col-sm-9">@Html.DisplayFor(model => model.Cedula)</dd>
+                }
+                @if (!string.IsNullOrEmpty(Model.Puesto))
+                {
+                    <dt class="col-sm-3">Puesto</dt>
+                    <dd class="col-sm-9">@Html.DisplayFor(model => model.Puesto)</dd>
+                }
+                @if (!string.IsNullOrEmpty(Model.Instancia))
+                {
+                    <dt class="col-sm-3">Instancia</dt>
+                    <dd class="col-sm-9">@Html.DisplayFor(model => model.Instancia)</dd>
+                }
+                @if (!string.IsNullOrEmpty(Model.CategoriaPersonal))
+                {
+                    <dt class="col-sm-3">Categoría Personal</dt>
+                    <dd class="col-sm-9">@Html.DisplayFor(model => model.CategoriaPersonal)</dd>
+                }
+                @if (!string.IsNullOrEmpty(Model.Titulo))
+                {
+                    <dt class="col-sm-3">Título</dt>
+                    <dd class="col-sm-9">@Html.DisplayFor(model => model.Titulo)</dd>
                 }
 
-                <a asp-action="Index" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left"></i> Volver a la Lista
-                </a>
-            </div>
+                @if (!string.IsNullOrEmpty(Model.RutaEvidencia))
+                {
+                    <dt class="col-sm-3">Evidencia</dt>
+                    <dd class="col-sm-9">
+                        <a href="@Model.RutaEvidencia" target="_blank">Ver Evidencia</a>
+                    </dd>
+                }
+
+                @if (Model.AprobadoPor != null)
+                {
+                    <dt class="col-sm-3">Aprobado/Rechazado Por</dt>
+                    <dd class="col-sm-9">@Model.AprobadoPor.Nombre @Model.AprobadoPor.Apellidos (@Model.AprobadoPor.NombreUsuario)</dd>
+                }
+                @if (Model.FechaResolucion.HasValue)
+                {
+                    <dt class="col-sm-3">Fecha de Resolución</dt>
+                    <dd class="col-sm-9">@Model.FechaResolucion.Value.ToString("dd/MM/yyyy HH:mm")</dd>
+                }
+                @if (!string.IsNullOrEmpty(Model.ComentariosAprobador))
+                {
+                    <dt class="col-sm-3">Comentarios del Aprobador</dt>
+                    <dd class="col-sm-9">@Html.DisplayFor(model => model.ComentariosAprobador)</dd>
+                }
+            </dl>
+        </div>
+        <div class="card-footer text-right">
+            <a asp-action="Index" class="btn btn-secondary">Volver a la Lista</a>
+            @if (User.IsInRole("Admin") || User.IsInRole("Supervisor"))
+            {
+                @if (Model.Estado == "Pendiente")
+                {
+                    <a asp-action="Resolve" asp-route-id="@Model.Id" class="btn btn-primary">Resolver Omisión</a>
+                }
+            }
         </div>
     </div>
 </div>
-

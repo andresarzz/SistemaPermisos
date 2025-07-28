@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System;
 
 namespace SistemaPermisos.Models
 {
@@ -9,23 +10,20 @@ namespace SistemaPermisos.Models
         public int Id { get; set; }
 
         [Required]
-        public int UsuarioId { get; set; }
+        public int UserId { get; set; }
 
         [Required]
         [StringLength(255)]
         public string Token { get; set; } = string.Empty;
 
-        public DateTime FechaCreacion { get; set; } = DateTime.Now;
+        [Required]
+        public DateTime ExpirationDate { get; set; }
 
-        public DateTime FechaExpiracion { get; set; }
-
-        public bool Usado { get; set; } = false;
-        public bool Utilizado { get; set; } = false;
-
-        public DateTime? FechaUso { get; set; }
+        [Required]
+        public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
 
         // Navegación
-        [ForeignKey("UsuarioId")]
-        public virtual Usuario Usuario { get; set; } = null!;
+        [ForeignKey("UserId")]
+        public virtual Usuario User { get; set; } = null!;
     }
 }

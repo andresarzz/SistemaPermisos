@@ -4,63 +4,44 @@
     ViewData["Title"] = "Eliminar Usuario";
 }
 
-<div class="container">
-    <div class="card mb-4">
-        <div class="card-header bg-danger text-white">
-            <h1><i class="fas fa-user-times"></i> @ViewData["Title"]</h1>
-        </div>
-        <div class="card-body">
-            <div class="alert alert-warning">
-                <i class="fas fa-exclamation-triangle"></i> ¿Está seguro de que desea eliminar este usuario? Esta acción no se puede deshacer.
-            </div>
+<div class="container mt-4">
+    <h2 class="mb-4">Eliminar Usuario</h2>
 
-            <div class="row">
-                <div class="col-md-4 text-center">
-                    @if (!string.IsNullOrEmpty(Model.FotoPerfil))
-                    {
-                        <img src="@Model.FotoPerfil" alt="Foto de Perfil" class="img-fluid rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;">
-                    }
-                    else
-                    {
-                        <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 150px; height: 150px;">
-                            <i class="fas fa-user fa-4x text-white"></i>
-                        </div>
-                    }
-                    <h3>@Model.Nombre</h3>
-                    <p>
-                        <span class="badge @(Model.Rol == "Admin" ? "bg-danger" : "bg-primary")">
-                            @Model.Rol
-                        </span>
-                    </p>
-                </div>
-                <div class="col-md-8">
-                    <h4 class="border-bottom pb-2">Información del Usuario</h4>
-                    <dl class="row">
-                        <dt class="col-sm-4">Correo Electrónico:</dt>
-                        <dd class="col-sm-8">@Model.Correo</dd>
+    <h3 class="text-danger">¿Está seguro de que desea eliminar este usuario?</h3>
+    <div>
+        <h4>Usuario: @Model.Nombre @Model.Apellidos</h4>
+        <hr />
+        <dl class="row">
+            <dt class="col-sm-2">
+                @Html.DisplayNameFor(model => model.NombreUsuario)
+            </dt>
+            <dd class="col-sm-10">
+                @Html.DisplayFor(model => model.NombreUsuario)
+            </dd>
+            <dt class="col-sm-2">
+                @Html.DisplayNameFor(model => model.Email)
+            </dt>
+            <dd class="col-sm-10">
+                @Html.DisplayFor(model => model.Email)
+            </dd>
+            <dt class="col-sm-2">
+                @Html.DisplayNameFor(model => model.Rol)
+            </dt>
+            <dd class="col-sm-10">
+                @Html.DisplayFor(model => model.Rol)
+            </dd>
+            <dt class="col-sm-2">
+                @Html.DisplayNameFor(model => model.IsActive)
+            </dt>
+            <dd class="col-sm-10">
+                @(Model.IsActive ? "Sí" : "No")
+            </dd>
+        </dl>
 
-                        <dt class="col-sm-4">Cédula:</dt>
-                        <dd class="col-sm-8">@(string.IsNullOrEmpty(Model.Cedula) ? "No especificada" : Model.Cedula)</dd>
-
-                        <dt class="col-sm-4">Puesto:</dt>
-                        <dd class="col-sm-8">@(string.IsNullOrEmpty(Model.Puesto) ? "No especificado" : Model.Puesto)</dd>
-
-                        <dt class="col-sm-4">Fecha de Registro:</dt>
-                        <dd class="col-sm-8">@Model.FechaRegistro.ToString("dd/MM/yyyy")</dd>
-                    </dl>
-                </div>
-            </div>
-
-            <form asp-action="Delete" class="mt-4">
-                <input type="hidden" asp-for="Id" />
-                <button type="submit" class="btn btn-danger">
-                    <i class="fas fa-trash"></i> Confirmar Eliminación
-                </button>
-                <a asp-action="Index" class="btn btn-secondary">
-                    <i class="fas fa-times"></i> Cancelar
-                </a>
-            </form>
-        </div>
+        <form asp-action="Delete">
+            <input type="hidden" asp-for="Id" />
+            <button type="submit" class="btn btn-danger">Eliminar</button>
+            <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
+        </form>
     </div>
 </div>
-

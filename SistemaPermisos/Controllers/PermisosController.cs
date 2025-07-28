@@ -1,61 +1,148 @@
-﻿using System;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Hosting;
-using SistemaPermisos.Data;
 using SistemaPermisos.Models;
+using SistemaPermisos.Repositories;
+using SistemaPermisos.Services;
 using SistemaPermisos.ViewModels;
+using System.IO;
+using System.Security.Claims;
+using System.Threading.Tasks;
 
 namespace SistemaPermisos.Controllers
 {
+    [Authorize]
     public class PermisosController : Controller
     {
-        private readonly ApplicationDbContext _context;
-        private readonly IWebHostEnvironment _hostEnvironment;
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly IAuditService _auditService;
+        private readonly IUserService _userService;
 
-        public PermisosController(ApplicationDbContext context, IWebHostEnvironment hostEnvironment)
+        public PermisosController(IUnitOfWork unitOfWork, IAuditService auditService, IUserService userService)
         {
-            _context = context;
-            _hostEnvironment = hostEnvironment;
+            _unitOfWork = unitOfWork;
+            _auditService = auditService;
+            _userService = userService;
         }
 
-        // GET: Permisos
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(int pageNumber = 1, int pageSize = 10, string? searchString = null, string? currentFilter = null)
         {
-            // Verificar si el usuario está autenticado
-            var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
-            if (usuarioId == null)
+            if (searchString != null)
             {
-                return RedirectToAction("Login", "Account");
+                pageNumber = 1;
+            }
+            else
+            {
+                searchString = currentFilter;
             }
 
-            var rol = HttpContext.Session.GetString("UsuarioRol");
+            ViewData["CurrentFilter"] = searchString;
 
-            // Si es administrador, mostrar todos los permisos
-            if (rol == "Admin")
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userRole = await _userService.GetUserRole(int.Parse(userId!));
+
+            IQueryable<Permiso> permisos;
+
+            if (userRole == "Admin" || userRole == "Supervisor")
             {
-                var permisos = await _context.Permisos
-                    .Include(p => p.Usuario)
-                    .OrderByDescending(p => p.FechaSolicitud)
-                    .ToListAsync();
-                return View(permisos);
+                permisos = _unitOfWork.Permisos.GetAll().OrderByDescending(p => p.FechaSolicitud);
+            }
+            else // Docente
+            {
+                permisos = _unitOfWork.Permisos.Find(p => p.UsuarioId == int.Parse(userId!)).OrderByDescending(p => p.FechaSolicitud);
             }
 
-            // Si es docente, mostrar solo sus permisos
-            var misPermisos = await _context.Permisos
-                .Include(p => p.Usuario)
-                .Where(p => p.UsuarioId == usuarioId)
-                .OrderByDescending(p => p.FechaSolicitud)
-                .ToListAsync();
+            if (!string.IsNullOrEmpty(searchString))
+            {
+                permisos = permisos.Where(p => p.TipoPermiso.Contains(searchString) ||
+                                               p.Motivo.Contains(searchString) ||
+                                               p.Estado.Contains(searchString));
+            }
 
-            return View(misPermisos);
+            var paginatedList = await PaginatedList<Permiso>.CreateAsync(permisos.AsNoTracking(), pageNumber, pageSize);
+
+            // Eager load related user for display
+            foreach (var permiso in paginatedList)
+            {
+                permiso.Usuario = await _userService.GetUserById(permiso.UsuarioId);
+                if (permiso.AprobadoPorId.HasValue)
+                {
+                    permiso.AprobadoPor = await _userService.GetUserById(permiso.AprobadoPorId.Value);
+                }
+            }
+
+            return View(paginatedList);
         }
 
-        // GET: Permisos/Details/5
+        [HttpGet]
+        public IActionResult Create()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create(PermisoViewModel model)
+        {
+            if (ModelState.IsValid)
+            {
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (userId == null)
+                {
+                    ModelState.AddModelError(string.Empty, "Usuario no autenticado.");
+                    return View(model);
+                }
+
+                string? documentPath = null;
+                if (model.DocumentoAdjunto != null)
+                {
+                    var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "permisos");
+                    if (!Directory.Exists(uploadsFolder))
+                    {
+                        Directory.CreateDirectory(uploadsFolder);
+                    }
+                    var uniqueFileName = Guid.NewGuid().ToString() + "_" + model.DocumentoAdjunto.FileName;
+                    var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+                    using (var fileStream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await model.DocumentoAdjunto.CopyToAsync(fileStream);
+                    }
+                    documentPath = Path.Combine("/uploads", "permisos", uniqueFileName);
+                }
+
+                var permiso = new Permiso
+                {
+                    UsuarioId = int.Parse(userId),
+                    TipoPermiso = model.TipoPermiso,
+                    FechaInicio = model.FechaInicio,
+                    FechaFin = model.FechaFin,
+                    HoraDesde = model.HoraDesde,
+                    HoraHasta = model.HoraHasta,
+                    JornadaCompleta = model.JornadaCompleta,
+                    MediaJornada = model.MediaJornada,
+                    CantidadLecciones = model.CantidadLecciones,
+                    Cedula = model.Cedula,
+                    Puesto = model.Puesto,
+                    Condicion = model.Condicion,
+                    TipoMotivo = model.TipoMotivo,
+                    TipoConvocatoria = model.TipoConvocatoria,
+                    Motivo = model.Motivo,
+                    DocumentoAdjunto = documentPath,
+                    FechaSolicitud = DateTime.Now,
+                    Estado = "Pendiente"
+                };
+
+                await _unitOfWork.Permisos.AddAsync(permiso);
+                await _unitOfWork.SaveAsync();
+
+                await _auditService.LogAction(int.Parse(userId), "Crear Permiso", $"Permiso de tipo '{permiso.TipoPermiso}' creado (ID: {permiso.Id}).");
+                TempData["SuccessMessage"] = "Permiso solicitado exitosamente.";
+                return RedirectToAction(nameof(Index));
+            }
+            return View(model);
+        }
+
+        [HttpGet]
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null)
@@ -63,169 +150,91 @@ namespace SistemaPermisos.Controllers
                 return NotFound();
             }
 
-            var permiso = await _context.Permisos
-                .Include(p => p.Usuario)
-                .FirstOrDefaultAsync(m => m.Id == id);
-
+            var permiso = await _unitOfWork.Permisos.GetByIdAsync(id.Value);
             if (permiso == null)
             {
                 return NotFound();
             }
 
-            // Verificar que el usuario tenga acceso a este permiso
-            var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
-            var rol = HttpContext.Session.GetString("UsuarioRol");
-
-            if (usuarioId == null || (permiso.UsuarioId != usuarioId && rol != "Admin"))
+            permiso.Usuario = await _userService.GetUserById(permiso.UsuarioId);
+            if (permiso.AprobadoPorId.HasValue)
             {
-                return RedirectToAction("Login", "Account");
+                permiso.AprobadoPor = await _userService.GetUserById(permiso.AprobadoPorId.Value);
+            }
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userRole = await _userService.GetUserRole(int.Parse(userId!));
+
+            if (userRole == "Docente" && permiso.UsuarioId != int.Parse(userId!))
+            {
+                return Forbid(); // Docentes can only view their own permissions
             }
 
             return View(permiso);
         }
 
-        // GET: Permisos/Create
-        public IActionResult Create()
+        [HttpGet]
+        [Authorize(Policy = "SupervisorPolicy")]
+        public async Task<IActionResult> Resolve(int? id)
         {
-            // Verificar si el usuario está autenticado
-            var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
-            if (usuarioId == null)
+            if (id == null)
             {
-                return RedirectToAction("Login", "Account");
+                return NotFound();
             }
 
-            // Obtener información del usuario para prellenar el formulario
-            var usuario = _context.Usuarios.Find(usuarioId);
-            if (usuario != null)
+            var permiso = await _unitOfWork.Permisos.GetByIdAsync(id.Value);
+            if (permiso == null)
             {
-                var viewModel = new PermisoViewModel
-                {
-                    Fecha = DateTime.Now,
-                    Cedula = usuario.Cedula ?? "",
-                    Puesto = usuario.Puesto ?? ""
-                };
-                return View(viewModel);
+                return NotFound();
             }
 
-            return View(new PermisoViewModel { Fecha = DateTime.Now });
-        }
-
-        // POST: Permisos/Create
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(PermisoViewModel model)
-        {
-            // Verificar si el usuario está autenticado
-            var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
-            if (usuarioId == null)
+            var model = new ResolucionPermisoViewModel
             {
-                TempData["ErrorMessage"] = "Debe iniciar sesión para crear un permiso.";
-                return RedirectToAction("Login", "Account");
-            }
-
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    // Procesar la imagen del comprobante
-                    string rutaComprobante = null;
-                    if (model.Comprobante != null && model.Comprobante.Length > 0)
-                    {
-                        string uploadsFolder = Path.Combine(_hostEnvironment.WebRootPath, "uploads", "comprobantes");
-                        string uniqueFileName = Guid.NewGuid().ToString() + "_" + model.Comprobante.FileName;
-                        string filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                        // Asegurar que el directorio existe
-                        Directory.CreateDirectory(uploadsFolder);
-
-                        using (var fileStream = new FileStream(filePath, FileMode.Create))
-                        {
-                            await model.Comprobante.CopyToAsync(fileStream);
-                        }
-
-                        rutaComprobante = "/uploads/comprobantes/" + uniqueFileName;
-                    }
-
-                    var permiso = new Permiso
-                    {
-                        UsuarioId = usuarioId.Value,
-                        TipoPermiso = "Solicitud de Permiso", // Valor por defecto
-                        Fecha = model.Fecha,
-                        FechaInicio = model.Fecha, // Usar la misma fecha
-                        FechaFin = model.Fecha, // Usar la misma fecha
-                        HoraDesde = !string.IsNullOrEmpty(model.HoraDesde) ? TimeSpan.Parse(model.HoraDesde) : null,
-                        HoraHasta = !string.IsNullOrEmpty(model.HoraHasta) ? TimeSpan.Parse(model.HoraHasta) : null,
-                        JornadaCompleta = model.JornadaCompleta,
-                        MediaJornada = model.MediaJornada,
-                        CantidadLecciones = model.CantidadLecciones,
-                        Cedula = model.Cedula,
-                        Puesto = model.Puesto,
-                        Condicion = model.Condicion,
-                        TipoMotivo = model.TipoMotivo,
-                        TipoConvocatoria = model.TipoConvocatoria,
-                        Motivo = !string.IsNullOrEmpty(model.Motivo) ? model.Motivo : model.TipoMotivo,
-                        Observaciones = model.Observaciones,
-                        HoraSalida = model.HoraSalida,
-                        RutaComprobante = rutaComprobante,
-                        Estado = "Pendiente",
-                        FechaSolicitud = DateTime.Now,
-                        RutaJustificacion = null,
-                        Justificado = false
-                    };
-
-                    // Actualizar información del usuario si es necesario
-                    var usuario = await _context.Usuarios.FindAsync(usuarioId);
-                    if (usuario != null)
-                    {
-                        bool usuarioActualizado = false;
-
-                        if (string.IsNullOrEmpty(usuario.Cedula) && !string.IsNullOrEmpty(model.Cedula))
-                        {
-                            usuario.Cedula = model.Cedula;
-                            usuarioActualizado = true;
-                        }
-                        if (string.IsNullOrEmpty(usuario.Puesto) && !string.IsNullOrEmpty(model.Puesto))
-                        {
-                            usuario.Puesto = model.Puesto;
-                            usuarioActualizado = true;
-                        }
-
-                        if (usuarioActualizado)
-                        {
-                            _context.Update(usuario);
-                        }
-                    }
-
-                    _context.Add(permiso);
-                    await _context.SaveChangesAsync();
-
-                    TempData["SuccessMessage"] = "Solicitud de permiso enviada exitosamente.";
-                    return RedirectToAction(nameof(Index));
-                }
-                catch (FormatException ex)
-                {
-                    ModelState.AddModelError("", "Formato de hora inválido. Use el formato HH:MM (ejemplo: 08:30).");
-                }
-                catch (Exception ex)
-                {
-                    ModelState.AddModelError("", "Ocurrió un error al procesar la solicitud: " + ex.Message);
-                    // Log del error para debugging
-                    System.Diagnostics.Debug.WriteLine($"Error en Create Permiso: {ex.Message}");
-                    System.Diagnostics.Debug.WriteLine($"Stack Trace: {ex.StackTrace}");
-                }
-            }
-            else
-            {
-                // Agregar información de errores de validación para debugging
-                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
-                System.Diagnostics.Debug.WriteLine($"Errores de validación: {string.Join(", ", errors)}");
-            }
-
-            // Si llegamos aquí, algo salió mal, volver a mostrar el formulario
+                PermisoId = permiso.Id,
+                NuevoEstado = permiso.Estado,
+                ComentariosAprobador = permiso.ComentariosAprobador,
+                TipoRebajo = permiso.TipoRebajo
+            };
             return View(model);
         }
 
-        // GET: Permisos/Justify/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = "SupervisorPolicy")]
+        public async Task<IActionResult> Resolve(ResolucionPermisoViewModel model)
+        {
+            if (ModelState.IsValid)
+            {
+                var permiso = await _unitOfWork.Permisos.GetByIdAsync(model.PermisoId);
+                if (permiso == null)
+                {
+                    return NotFound();
+                }
+
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (userId == null)
+                {
+                    ModelState.AddModelError(string.Empty, "Usuario no autenticado.");
+                    return View(model);
+                }
+
+                permiso.Estado = model.NuevoEstado;
+                permiso.ComentariosAprobador = model.ComentariosAprobador;
+                permiso.TipoRebajo = model.TipoRebajo;
+                permiso.FechaResolucion = DateTime.Now;
+                permiso.AprobadoPorId = int.Parse(userId);
+
+                _unitOfWork.Permisos.Update(permiso);
+                await _unitOfWork.SaveAsync();
+
+                await _auditService.LogAction(int.Parse(userId), "Resolver Permiso", $"Permiso (ID: {permiso.Id}) resuelto a estado '{permiso.Estado}'.");
+                TempData["SuccessMessage"] = "Permiso resuelto exitosamente.";
+                return RedirectToAction(nameof(Index));
+            }
+            return View(model);
+        }
+
+        [HttpGet]
         public async Task<IActionResult> Justify(int? id)
         {
             if (id == null)
@@ -233,209 +242,86 @@ namespace SistemaPermisos.Controllers
                 return NotFound();
             }
 
-            var permiso = await _context.Permisos.FindAsync(id);
+            var permiso = await _unitOfWork.Permisos.GetByIdAsync(id.Value);
             if (permiso == null)
             {
                 return NotFound();
             }
 
-            // Verificar que el usuario tenga acceso a este permiso
-            var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
-            if (usuarioId == null || permiso.UsuarioId != usuarioId)
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (permiso.UsuarioId != int.Parse(userId!))
             {
-                return RedirectToAction("Login", "Account");
+                return Forbid(); // Only the owner can justify
             }
 
-            var viewModel = new JustificarPermisoViewModel
+            if (permiso.Estado != "Rechazado" && permiso.Estado != "Pendiente")
             {
-                PermisoId = permiso.Id
-            };
+                TempData["ErrorMessage"] = "Solo se pueden justificar permisos en estado 'Pendiente' o 'Rechazado'.";
+                return RedirectToAction(nameof(Details), new { id = permiso.Id });
+            }
 
-            return View(viewModel);
+            var model = new JustificarPermisoViewModel
+            {
+                PermisoId = permiso.Id,
+                Motivo = permiso.Justificacion ?? string.Empty
+            };
+            return View(model);
         }
 
-        // POST: Permisos/Justify/5
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Justify(JustificarPermisoViewModel model)
         {
             if (ModelState.IsValid)
             {
-                var permiso = await _context.Permisos.FindAsync(model.PermisoId);
+                var permiso = await _unitOfWork.Permisos.GetByIdAsync(model.PermisoId);
                 if (permiso == null)
                 {
                     return NotFound();
                 }
 
-                // Verificar que el usuario tenga acceso a este permiso
-                var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
-                if (usuarioId == null || permiso.UsuarioId != usuarioId)
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (permiso.UsuarioId != int.Parse(userId!))
                 {
-                    return RedirectToAction("Login", "Account");
+                    return Forbid();
                 }
 
-                // Procesar la imagen de justificación
-                if (model.Justificacion != null)
+                if (permiso.Estado != "Rechazado" && permiso.Estado != "Pendiente")
                 {
-                    string uploadsFolder = Path.Combine(_hostEnvironment.WebRootPath, "uploads", "justificaciones");
-                    string uniqueFileName = Guid.NewGuid().ToString() + "_" + model.Justificacion.FileName;
-                    string filePath = Path.Combine(uploadsFolder, uniqueFileName);
+                    ModelState.AddModelError(string.Empty, "Solo se pueden justificar permisos en estado 'Pendiente' o 'Rechazado'.");
+                    return View(model);
+                }
 
-                    // Asegurar que el directorio existe
-                    Directory.CreateDirectory(uploadsFolder);
-
+                string? documentPath = null;
+                if (model.DocumentoJustificacion != null)
+                {
+                    var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "justificaciones");
+                    if (!Directory.Exists(uploadsFolder))
+                    {
+                        Directory.CreateDirectory(uploadsFolder);
+                    }
+                    var uniqueFileName = Guid.NewGuid().ToString() + "_" + model.DocumentoJustificacion.FileName;
+                    var filePath = Path.Combine(uploadsFolder, uniqueFileName);
                     using (var fileStream = new FileStream(filePath, FileMode.Create))
                     {
-                        await model.Justificacion.CopyToAsync(fileStream);
+                        await model.DocumentoJustificacion.CopyToAsync(fileStream);
                     }
-
-                    permiso.RutaJustificacion = "/uploads/justificaciones/" + uniqueFileName;
-                    permiso.Justificado = true;
-
-                    await _context.SaveChangesAsync();
-                    return RedirectToAction(nameof(Index));
+                    documentPath = Path.Combine("/uploads", "justificaciones", uniqueFileName);
                 }
-            }
 
+                permiso.Justificacion = model.Motivo;
+                permiso.DocumentoAdjunto = documentPath; // Reutilizamos este campo para la justificación
+                permiso.FechaJustificacion = DateTime.Now;
+                permiso.Estado = "Justificado"; // Change state to Justificado
+
+                _unitOfWork.Permisos.Update(permiso);
+                await _unitOfWork.SaveAsync();
+
+                await _auditService.LogAction(int.Parse(userId), "Justificar Permiso", $"Permiso (ID: {permiso.Id}) justificado.");
+                TempData["SuccessMessage"] = "Permiso justificado exitosamente.";
+                return RedirectToAction(nameof(Details), new { id = permiso.Id });
+            }
             return View(model);
-        }
-
-        // GET: Permisos/Resolve/5 (Solo para administradores)
-        public async Task<IActionResult> Resolve(int? id)
-        {
-            // Verificar que sea administrador
-            var rol = HttpContext.Session.GetString("UsuarioRol");
-            if (rol != "Admin")
-            {
-                return RedirectToAction("Index", "Home");
-            }
-
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var permiso = await _context.Permisos
-                .Include(p => p.Usuario)
-                .FirstOrDefaultAsync(m => m.Id == id);
-
-            if (permiso == null)
-            {
-                return NotFound();
-            }
-
-            var viewModel = new ResolucionPermisoViewModel
-            {
-                PermisoId = permiso.Id
-            };
-
-            ViewBag.Permiso = permiso;
-
-            return View(viewModel);
-        }
-
-        // POST: Permisos/Resolve/5
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Resolve(ResolucionPermisoViewModel model)
-        {
-            // Verificar que sea administrador
-            var rol = HttpContext.Session.GetString("UsuarioRol");
-            if (rol != "Admin")
-            {
-                return RedirectToAction("Index", "Home");
-            }
-
-            if (ModelState.IsValid)
-            {
-                var permiso = await _context.Permisos.FindAsync(model.PermisoId);
-                if (permiso == null)
-                {
-                    return NotFound();
-                }
-
-                permiso.Resolucion = model.Resolucion;
-                permiso.ObservacionesResolucion = model.ObservacionesResolucion;
-                permiso.TipoRebajo = model.TipoRebajo;
-
-                // Actualizar el estado según la resolución
-                if (model.Resolucion == "Aceptar lo solicitado" || model.Resolucion == "Acoger convocatoria")
-                {
-                    permiso.Estado = "Aprobado";
-                }
-                else if (model.Resolucion == "Denegar lo solicitado")
-                {
-                    permiso.Estado = "Rechazado";
-                }
-
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
-            }
-
-            // Si hay errores, volver a cargar el permiso para la vista
-            var permisoDb = await _context.Permisos
-                .Include(p => p.Usuario)
-                .FirstOrDefaultAsync(m => m.Id == model.PermisoId);
-
-            ViewBag.Permiso = permisoDb;
-
-            return View(model);
-        }
-
-        // GET: Permisos/Approve/5 (Solo para administradores) - Método obsoleto, usar Resolve
-        public async Task<IActionResult> Approve(int? id)
-        {
-            // Verificar que sea administrador
-            var rol = HttpContext.Session.GetString("UsuarioRol");
-            if (rol != "Admin")
-            {
-                return RedirectToAction("Index", "Home");
-            }
-
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var permiso = await _context.Permisos.FindAsync(id);
-            if (permiso == null)
-            {
-                return NotFound();
-            }
-
-            permiso.Estado = "Aprobado";
-            permiso.Resolucion = "Aceptar lo solicitado";
-            await _context.SaveChangesAsync();
-
-            return RedirectToAction(nameof(Index));
-        }
-
-        // GET: Permisos/Reject/5 (Solo para administradores) - Método obsoleto, usar Resolve
-        public async Task<IActionResult> Reject(int? id)
-        {
-            // Verificar que sea administrador
-            var rol = HttpContext.Session.GetString("UsuarioRol");
-            if (rol != "Admin")
-            {
-                return RedirectToAction("Index", "Home");
-            }
-
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var permiso = await _context.Permisos.FindAsync(id);
-            if (permiso == null)
-            {
-                return NotFound();
-            }
-
-            permiso.Estado = "Rechazado";
-            permiso.Resolucion = "Denegar lo solicitado";
-            await _context.SaveChangesAsync();
-
-            return RedirectToAction(nameof(Index));
         }
     }
 }

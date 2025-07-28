@@ -1,109 +1,78 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using SistemaPermisos.Data;
+using SistemaPermisos.Repositories;
 using SistemaPermisos.Services;
 using SistemaPermisos.ViewModels;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace SistemaPermisos.Controllers
 {
+    [Authorize(Policy = "DocentePolicy")]
     public class DocenteController : Controller
     {
-        private readonly ApplicationDbContext _context;
-        private readonly IAuditService _auditService;
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly IUserService _userService;
 
-        public DocenteController(ApplicationDbContext context, IAuditService auditService)
+        public DocenteController(IUnitOfWork unitOfWork, IUserService userService)
         {
-            _context = context;
-            _auditService = auditService;
+            _unitOfWork = unitOfWork;
+            _userService = userService;
         }
 
         public async Task<IActionResult> Dashboard()
         {
-            // Verificar autenticación
-            var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
-            var usuarioRol = HttpContext.Session.GetString("UsuarioRol");
-
-            if (usuarioId == null)
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null)
             {
-                return RedirectToAction("Login", "Account");
+                return Unauthorized();
             }
 
-            // Obtener estadísticas del docente
-            var misPermisos = await _context.Permisos.CountAsync(p => p.UsuarioId == usuarioId);
-            var permisosPendientes = await _context.Permisos.CountAsync(p => p.UsuarioId == usuarioId && p.Estado == "Pendiente");
-            var permisosAprobados = await _context.Permisos.CountAsync(p => p.UsuarioId == usuarioId && p.Estado == "Aprobado");
-            var misOmisiones = await _context.OmisionesMarca.CountAsync(o => o.UsuarioId == usuarioId);
+            var currentUserId = int.Parse(userId);
 
-            var viewModel = new DocenteDashboardViewModel
+            var model = new DocenteDashboardViewModel
             {
-                MisPermisos = misPermisos,
-                PermisosPendientes = permisosPendientes,
-                PermisosAprobados = permisosAprobados,
-                MisOmisiones = misOmisiones
+                TotalPermisosSolicitados = await _unitOfWork.Permisos.CountAsync(p => p.UsuarioId == currentUserId),
+                PermisosAprobados = await _unitOfWork.Permisos.CountAsync(p => p.UsuarioId == currentUserId && p.Estado == "Aprobado"),
+                PermisosRechazados = await _unitOfWork.Permisos.CountAsync(p => p.UsuarioId == currentUserId && p.Estado == "Rechazado"),
+                PermisosPendientes = await _unitOfWork.Permisos.CountAsync(p => p.UsuarioId == currentUserId && p.Estado == "Pendiente"),
+
+                TotalOmisionesSolicitadas = await _unitOfWork.OmisionesMarca.CountAsync(o => o.UsuarioId == currentUserId),
+                OmisionesAprobadas = await _unitOfWork.OmisionesMarca.CountAsync(o => o.UsuarioId == currentUserId && o.Estado == "Aprobado"),
+                OmisionesRechazadas = await _unitOfWork.OmisionesMarca.CountAsync(o => o.UsuarioId == currentUserId && o.Estado == "Rechazado"),
+                OmisionesPendientes = await _unitOfWork.OmisionesMarca.CountAsync(o => o.UsuarioId == currentUserId && o.Estado == "Pendiente"),
+
+                TotalReportesCreados = await _unitOfWork.ReportesDano.CountAsync(r => r.UsuarioId == currentUserId),
+                ReportesResueltos = await _unitOfWork.ReportesDano.CountAsync(r => r.UsuarioId == currentUserId && r.Estado == "Resuelto"),
+                ReportesEnProceso = await _unitOfWork.ReportesDano.CountAsync(r => r.UsuarioId == currentUserId && r.Estado == "En Proceso"),
+                ReportesPendientes = await _unitOfWork.ReportesDano.CountAsync(r => r.UsuarioId == currentUserId && r.Estado == "Pendiente"),
+
+                MisPermisosRecientes = (await _unitOfWork.Permisos.Find(p => p.UsuarioId == currentUserId).OrderByDescending(p => p.FechaSolicitud).Take(5).ToListAsync()),
+                MisOmisionesRecientes = (await _unitOfWork.OmisionesMarca.Find(o => o.UsuarioId == currentUserId).OrderByDescending(o => o.FechaSolicitud).Take(5).ToListAsync()),
+                MisReportesRecientes = (await _unitOfWork.ReportesDano.Find(r => r.UsuarioId == currentUserId).OrderByDescending(r => r.FechaReporte).Take(5).ToListAsync()),
+                ActividadReciente = (await _unitOfWork.AuditLogs.Find(a => a.UsuarioId == currentUserId).OrderByDescending(a => a.FechaHora).Take(10).ToListAsync())
             };
 
-            return View(viewModel);
-        }
-
-        public async Task<IActionResult> MisPermisos()
-        {
-            var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
-
-            if (usuarioId == null)
+            // Eager load related user for display
+            foreach (var permiso in model.MisPermisosRecientes)
             {
-                return RedirectToAction("Login", "Account");
+                permiso.Usuario = await _userService.GetUserById(permiso.UsuarioId);
+            }
+            foreach (var omision in model.MisOmisionesRecientes)
+            {
+                omision.Usuario = await _userService.GetUserById(omision.UsuarioId);
+            }
+            foreach (var reporte in model.MisReportesRecientes)
+            {
+                reporte.Usuario = await _userService.GetUserById(reporte.UsuarioId);
+            }
+            foreach (var log in model.ActividadReciente)
+            {
+                log.Usuario = await _userService.GetUserById(log.UsuarioId);
             }
 
-            var permisos = await _context.Permisos
-                .Where(p => p.UsuarioId == usuarioId)
-                .OrderByDescending(p => p.FechaSolicitud)
-                .ToListAsync();
-
-            return View(permisos);
-        }
-
-        public async Task<IActionResult> MisOmisiones()
-        {
-            var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
-
-            if (usuarioId == null)
-            {
-                return RedirectToAction("Login", "Account");
-            }
-
-            var omisiones = await _context.OmisionesMarca
-                .Where(o => o.UsuarioId == usuarioId)
-                .OrderByDescending(o => o.FechaOmision)
-                .ToListAsync();
-
-            return View(omisiones);
-        }
-
-        public IActionResult SolicitarPermiso()
-        {
-            var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
-
-            if (usuarioId == null)
-            {
-                return RedirectToAction("Login", "Account");
-            }
-
-            return RedirectToAction("Create", "Permisos");
-        }
-
-        public IActionResult ReportarOmision()
-        {
-            var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
-
-            if (usuarioId == null)
-            {
-                return RedirectToAction("Login", "Account");
-            }
-
-            return RedirectToAction("Create", "Omisiones");
+            return View(model);
         }
     }
 }

@@ -1,56 +1,82 @@
 ﻿@model SistemaPermisos.Models.ReporteDano
 
 @{
-    ViewData["Title"] = "Detalles del Reporte";
-    var esAdmin = Context.Session.GetString("UsuarioRol") == "Admin";
+    ViewData["Title"] = "Detalles de Reporte";
 }
 
-<div class="container">
-    <h1>@ViewData["Title"]</h1>
+<div class="container mt-4">
+    <h2 class="mb-4">Detalles de Reporte de Daño</h2>
 
     <div class="card">
+        <div class="card-header">
+            Información del Reporte #@Model.Id
+        </div>
         <div class="card-body">
             <dl class="row">
-                @if (esAdmin)
-                {
-                    <dt class="col-sm-3">Docente</dt>
-                    <dd class="col-sm-9">@Model.Usuario.Nombre</dd>
-                }
+                <dt class="col-sm-3">Usuario</dt>
+                <dd class="col-sm-9">@Model.Usuario?.Nombre @Model.Usuario?.Apellidos (@Model.Usuario?.NombreUsuario)</dd>
 
-                <dt class="col-sm-3">Fecha de Reporte</dt>
-                <dd class="col-sm-9">@Model.FechaReporte.ToString("dd/MM/yyyy HH:mm")</dd>
-
-                <dt class="col-sm-3">Ubicación</dt>
-                <dd class="col-sm-9">@Model.Ubicacion</dd>
+                <dt class="col-sm-3">Tipo de Daño</dt>
+                <dd class="col-sm-9">@Html.DisplayFor(model => model.TipoDano)</dd>
 
                 <dt class="col-sm-3">Descripción</dt>
-                <dd class="col-sm-9">@Model.Descripcion</dd>
+                <dd class="col-sm-9">@Html.DisplayFor(model => model.Descripcion)</dd>
 
-                <dt class="col-sm-3">Estado</dt>
-                <dd class="col-sm-9">
-                    <span class="badge @(Model.Estado == "Resuelto" ? "bg-success" : "bg-warning")">
-                        @Model.Estado
-                    </span>
-                </dd>
+                <dt class="col-sm-3">Fecha del Reporte</dt>
+                <dd class="col-sm-9">@Model.FechaReporte.ToString("dd/MM/yyyy HH:mm")</dd>
 
-                @if (!string.IsNullOrEmpty(Model.RutaImagen))
+                <dt class="col-sm-3">Equipo</dt>
+                <dd class="col-sm-9">@Html.DisplayFor(model => model.Equipo)</dd>
+
+                @if (!string.IsNullOrEmpty(Model.Ubicacion))
                 {
-                    <dt class="col-sm-3">Imagen</dt>
+                    <dt class="col-sm-3">Ubicación</dt>
+                    <dd class="col-sm-9">@Html.DisplayFor(model => model.Ubicacion)</dd>
+                }
+
+                @if (!string.IsNullOrEmpty(Model.Observaciones))
+                {
+                    <dt class="col-sm-3">Observaciones</dt>
+                    <dd class="col-sm-9">@Html.DisplayFor(model => model.Observaciones)</dd>
+                }
+
+                @if (!string.IsNullOrEmpty(Model.RutaEvidencia))
+                {
+                    <dt class="col-sm-3">Evidencia</dt>
                     <dd class="col-sm-9">
-                        <img src="@Model.RutaImagen" alt="Imagen del daño" class="img-fluid img-thumbnail" style="max-width: 300px;" />
+                        <a href="@Model.RutaEvidencia" target="_blank">Ver Evidencia</a>
                     </dd>
                 }
-            </dl>
 
-            <div>
-                @if (esAdmin && Model.Estado == "Pendiente")
+                <dt class="col-sm-3">Estado</dt>
+                <dd class="col-sm-9">@Html.DisplayFor(model => model.Estado)</dd>
+
+                @if (Model.ResueltoPor != null)
                 {
-                    <a asp-action="MarkAsResolved" asp-route-id="@Model.Id" class="btn btn-success">Marcar como Resuelto</a>
+                    <dt class="col-sm-3">Resuelto Por</dt>
+                    <dd class="col-sm-9">@Model.ResueltoPor.Nombre @Model.ResueltoPor.Apellidos (@Model.ResueltoPor.NombreUsuario)</dd>
                 }
-
-                <a asp-action="Index" class="btn btn-secondary">Volver a la Lista</a>
-            </div>
+                @if (Model.FechaResolucion.HasValue)
+                {
+                    <dt class="col-sm-3">Fecha de Resolución</dt>
+                    <dd class="col-sm-9">@Model.FechaResolucion.Value.ToString("dd/MM/yyyy HH:mm")</dd>
+                }
+                @if (!string.IsNullOrEmpty(Model.ObservacionesResolucion))
+                {
+                    <dt class="col-sm-3">Observaciones de Resolución</dt>
+                    <dd class="col-sm-9">@Html.DisplayFor(model => model.ObservacionesResolucion)</dd>
+                }
+            </dl>
+        </div>
+        <div class="card-footer text-right">
+            <a asp-action="Index" class="btn btn-secondary">Volver a la Lista</a>
+            @if (User.IsInRole("Admin") || User.IsInRole("Supervisor"))
+            {
+                @if (Model.Estado == "Pendiente" || Model.Estado == "En Proceso")
+                {
+                    <a asp-action="Resolve" asp-route-id="@Model.Id" class="btn btn-primary">Resolver Reporte</a>
+                }
+            }
         </div>
     </div>
 </div>
-

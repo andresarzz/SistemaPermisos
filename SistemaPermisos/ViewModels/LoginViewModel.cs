@@ -4,15 +4,16 @@ namespace SistemaPermisos.ViewModels
 {
     public class LoginViewModel
     {
-        [Required(ErrorMessage = "El correo es obligatorio")]
-        [EmailAddress(ErrorMessage = "Formato de correo inválido")]
-        [Display(Name = "Correo Electrónico")]
-        public string Correo { get; set; }
+        [Required(ErrorMessage = "El nombre de usuario o correo electrónico es obligatorio")]
+        [Display(Name = "Nombre de usuario o Correo electrónico")]
+        public string UsernameOrEmail { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "La contraseña es obligatoria")]
         [DataType(DataType.Password)]
         [Display(Name = "Contraseña")]
-        public string Password { get; set; }
+        public string Password { get; set; } = string.Empty;
+
+        [Display(Name = "Recordarme")]
+        public bool RememberMe { get; set; }
     }
 }
-
